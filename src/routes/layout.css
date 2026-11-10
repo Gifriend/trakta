@@ -1,0 +1,248 @@
+@import 'tailwindcss' source('../');
+
+:root {
+	font-family: 'Inter', 'Segoe UI', sans-serif;
+	color: var(--ink);
+	background: var(--background);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	--ink: #1f302a;
+	--muted: #65736c;
+	--primary: #176b54;
+	--primary-hover: #105440;
+	--primary-soft: #edf5ee;
+	--forest: #124e43;
+	--lime: #d5ed9c;
+	--surface: #ffffff;
+	--background: #f7f8fa;
+	--subtle: #f7f9f7;
+	--border: #e8ece9;
+	--ring: #79ad95;
+	--danger: #b33333;
+	--danger-soft: #fff0ef;
+	--warning: #8f5a16;
+	--warning-soft: #fff5e0;
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	min-width: 320px;
+}
+button,
+input,
+select,
+textarea {
+	font: inherit;
+}
+button,
+a,
+input,
+textarea {
+	-webkit-tap-highlight-color: transparent;
+}
+button {
+	cursor: pointer;
+}
+button,
+a {
+	touch-action: manipulation;
+}
+button:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+button,
+a,
+input,
+textarea {
+	transition:
+		background-color 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+	outline: 3px solid var(--ring);
+	outline-offset: 3px;
+}
+input,
+textarea {
+	display: block;
+	width: 100%;
+	border: 1px solid #dbe2dd;
+	border-radius: 7px;
+	background: var(--surface);
+	color: var(--ink);
+	padding: 13px 14px;
+	font-size: 14px;
+	line-height: 1.5;
+	box-shadow: 0 1px 2px #172e2203;
+}
+input::placeholder,
+textarea::placeholder {
+	color: #7c8881;
+}
+input:focus,
+textarea:focus {
+	border-color: var(--primary);
+}
+label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	margin-bottom: 9px;
+}
+h1,
+h2,
+h3,
+p {
+	margin-top: 0;
+}
+h2 {
+	margin-bottom: 0;
+	font-weight: 600;
+}
+.muted {
+	color: var(--muted);
+}
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 9px;
+	border: 1px solid transparent;
+	border-radius: 7px;
+	padding: 12px 17px;
+	min-height: 46px;
+	font-size: 12px;
+	font-weight: 550;
+	text-decoration: none;
+}
+.primary {
+	background: var(--primary);
+	color: white;
+}
+.primary:hover:not(:disabled) {
+	background: var(--primary-hover);
+}
+.secondary {
+	background: var(--surface);
+	border-color: #dbe2dd;
+	color: var(--ink);
+}
+.secondary:hover:not(:disabled) {
+	background: var(--primary-soft);
+	border-color: #b9cabe;
+}
+.text-button {
+	color: var(--primary);
+	background: transparent;
+	border: 0;
+	padding: 8px 0;
+	min-height: 44px;
+	font-size: inherit;
+	font-weight: 600;
+}
+.text-button:hover:not(:disabled) {
+	color: var(--primary-hover);
+	text-decoration: underline;
+}
+.icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 8px;
+	background: transparent;
+	border: 0;
+	color: var(--muted);
+	border-radius: 7px;
+	flex-shrink: 0;
+}
+.icon-button:hover:not(:disabled) {
+	background: var(--primary-soft);
+	color: var(--primary);
+}
+.card {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--surface);
+	box-shadow: 0 2px 3px #172e2202;
+}
+.section-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.notice {
+	padding: 14px 16px;
+	background: var(--warning-soft);
+	color: var(--warning);
+	border: 1px solid #ecd9b5;
+	border-radius: 8px;
+	font-size: 13px;
+	line-height: 1.65;
+}
+.notice.error {
+	background: var(--danger-soft);
+	border-color: #f1d2cf;
+	color: var(--danger);
+	margin: 15px 0;
+}
+.notice.success {
+	background: var(--primary-soft);
+	border-color: #ccdfd2;
+	color: var(--primary);
+}
+.spinner {
+	width: 24px;
+	height: 24px;
+	border: 2px solid var(--border);
+	border-top-color: var(--primary);
+	border-radius: 50%;
+	display: inline-block;
+	animation: spin 800ms linear infinite;
+}
+.skip-link {
+	position: fixed;
+	top: -100px;
+	left: 16px;
+	z-index: 100;
+	color: white;
+	background: var(--primary);
+	padding: 12px 18px;
+	border-radius: 6px;
+}
+.skip-link:focus {
+	top: 15px;
+}
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+@media (max-width: 640px) {
+	input,
+	textarea {
+		font-size: 16px;
+	}
+	body {
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+}
