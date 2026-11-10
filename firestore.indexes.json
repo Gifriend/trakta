@@ -1,0 +1,4 @@
+{
+	"indexes": [],
+	"fieldOverrides": [{ "collectionGroup": "photos", "fieldPath": "base64", "indexes": [] }]
+}

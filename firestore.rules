@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function todayKey() {
+      let wib = request.time + duration.value(7, 'h');
+      return string(wib.year() * 10000 + wib.month() * 100 + wib.day());
+    }
+    function validEvent(event) {
+      return event is map
+        && event.keys().hasAll(['timestamp', 'mode', 'note'])
+        && event.keys().hasOnly(['timestamp', 'mode', 'note'])
+        && event.timestamp == request.time
+        && event.mode in ['office', 'remote', 'field']
+        && event.note is string && event.note.size() <= 300;
+    }
+    function photoCommitted(uid, day, kind) {
+      let photo = getAfter(/databases/$(database)/documents/users/$(uid)/attendance/$(day)/photos/$(kind)).data;
+      return photo.createdAt == request.time;
+    }
+    match /users/{uid}/attendance/{day} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && day == todayKey()
+        && request.resource.data.keys().hasAll(['dateKey', 'checkIn'])
+        && request.resource.data.keys().hasOnly(['dateKey', 'checkIn'])
+        && request.resource.data.dateKey == day
+        && validEvent(request.resource.data.checkIn)
+        && photoCommitted(uid, day, 'checkIn');
+      allow update: if owner(uid) && day == todayKey()
+        && !('checkOut' in resource.data)
+        && request.resource.data.keys().hasAll(['dateKey', 'checkIn', 'checkOut'])
+        && request.resource.data.keys().hasOnly(['dateKey', 'checkIn', 'checkOut'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkOut'])
+        && validEvent(request.resource.data.checkOut)
+        && request.resource.data.checkOut.timestamp >= resource.data.checkIn.timestamp
+        && photoCommitted(uid, day, 'checkOut');
+      allow delete: if false;
+      match /photos/{kind} {
+        function validPhoto() {
+          let photo = request.resource.data;
+          let padding = photo.base64.matches('.*==$') ? 2 : (photo.base64.matches('.*=$') ? 1 : 0);
+          let decodedBytes = photo.base64.size() / 4 * 3 - padding;
+          return photo.keys().hasAll(['base64', 'bytes', 'mimeType', 'createdAt'])
+            && photo.keys().hasOnly(['base64', 'bytes', 'mimeType', 'createdAt'])
+            && photo.base64 is string
+            && photo.base64.size() > 0 && photo.base64.size() <= 133336
+            && photo.base64.matches('^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$')
+            && photo.bytes is int && photo.bytes == decodedBytes
+            && photo.bytes > 0 && photo.bytes <= 100000
+            && photo.mimeType == 'image/jpeg'
+            && photo.createdAt == request.time;
+        }
+        allow read: if owner(uid);
+        allow create: if owner(uid) && day == todayKey()
+          && kind in ['checkIn', 'checkOut']
+          && validPhoto()
+          && getAfter(/databases/$(database)/documents/users/$(uid)/attendance/$(day)).data[kind].timestamp == request.time;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
