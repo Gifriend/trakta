@@ -5,6 +5,7 @@
 	import { submitAttendance } from '#lib/firebase/attendance.ts';
 	import { friendlyError } from '#lib/firebase/auth.ts';
 	import Icon from './Icon.svelte';
+	import PhotoPicker from './PhotoPicker.svelte';
 	let {
 		uid,
 		kind,
@@ -17,16 +18,12 @@
 	let processing = $state(false);
 	let submitting = $state(false);
 	let error = $state('');
-	let fileInput: HTMLInputElement;
+	let cameraActive = $state(false);
 	let selectionVersion = 0;
 	const label = $derived(kind === 'checkIn' ? 'masuk' : 'pulang');
 
-	async function choosePhoto(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function choosePhoto(file: File) {
 		const version = ++selectionVersion;
-		photo = null;
 		error = '';
 		processing = true;
 		try {
@@ -36,15 +33,13 @@
 			if (version === selectionVersion) error = friendlyError(cause);
 		} finally {
 			if (version === selectionVersion) processing = false;
-			input.value = '';
 		}
 	}
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (submitting || processing) return;
+		if (submitting || processing || cameraActive) return;
 		if (!photo) {
 			error = 'Tambahkan foto untuk melengkapi presensimu.';
-			fileInput.focus();
 			return;
 		}
 		submitting = true;
@@ -86,44 +81,15 @@
 			</div>
 		</fieldset>
 		<label for="photo">Foto presensi <span class="required">*</span></label>
-		<div class={['upload-area', { 'has-photo': photo }]}>
-			{#if photo}<img
-					src={photo.dataUrl}
-					width={photo.width}
-					height={photo.height}
-					alt="Pratinjau foto presensi yang akan dikirim"
-				/>
-				<div class="photo-overlay">
-					<span><Icon name="check" size={14} /> {(photo.bytes / 1000).toFixed(1)} KB</span><button
-						type="button"
-						onclick={() => fileInput.click()}
-						disabled={submitting}>Ganti foto</button
-					>
-				</div>{:else}<div class="upload-icon"><Icon name="camera" size={25} /></div>
-				<strong>{processing ? 'Menyiapkan fotomu…' : 'Satu foto untuk hari ini'}</strong>
-				<p>Ambil foto atau pilih dari perangkatmu</p>
-				<button
-					type="button"
-					class="button secondary"
-					onclick={() => fileInput.click()}
-					disabled={processing || submitting}><Icon name="upload" size={16} /> Pilih foto</button
-				>{/if}
-			<input
-				bind:this={fileInput}
-				id="photo"
-				class="file-input"
-				type="file"
-				accept="image/jpeg,image/png,image/webp"
-				capture="user"
-				onchange={choosePhoto}
-				disabled={processing || submitting}
-				aria-label="Pilih atau ambil foto presensi"
-				aria-describedby="photo-help"
-			/>
-		</div>
-		<p id="photo-help" class="field-help">
-			<Icon name="image" size={13} /> JPG, PNG, WebP · Otomatis diperkecil hingga 100 KB
-		</p>
+		<PhotoPicker
+			{photo}
+			{processing}
+			disabled={submitting}
+			onselect={choosePhoto}
+			onactivechange={(active) => {
+				cameraActive = active;
+			}}
+		/>
 		<label for="note">Catatan <span class="optional">(opsional)</span></label><textarea
 			id="note"
 			rows="2"
@@ -141,7 +107,7 @@
 		<button
 			type="submit"
 			class="button primary submit-attendance"
-			disabled={!online || processing || submitting || !photo}
+			disabled={!online || processing || submitting || cameraActive || !photo}
 			>{submitting ? 'Mengirim presensi…' : `Konfirmasi ${label}`}<Icon
 				name="arrow"
 				size={18}
@@ -222,95 +188,6 @@
 		margin: 0;
 		box-shadow: none;
 		accent-color: var(--primary);
-	}
-	.upload-area {
-		border: 1px dashed #b9cac3;
-		border-radius: 10px;
-		background: var(--subtle);
-		min-height: 214px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		position: relative;
-		padding: 22px;
-		overflow: hidden;
-	}
-	.upload-icon {
-		color: var(--primary);
-		background: var(--primary-soft);
-		padding: 12px;
-		border-radius: 50%;
-		margin-bottom: 12px;
-	}
-	.upload-area strong {
-		font-size: 12px;
-	}
-	.upload-area p {
-		font-size: 11px;
-		color: var(--muted);
-		margin: 6px 0 14px;
-	}
-	.upload-area .button {
-		font-size: 11px;
-		min-height: 38px;
-	}
-	.file-input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		opacity: 0;
-		padding: 0;
-		bottom: 0;
-		left: 50%;
-	}
-	.upload-area:focus-within {
-		outline: 3px solid var(--ring);
-		outline-offset: 3px;
-	}
-	.has-photo {
-		padding: 0;
-		background: var(--subtle);
-	}
-	.has-photo img {
-		width: 100%;
-		height: 230px;
-		object-fit: contain;
-	}
-	.photo-overlay {
-		position: absolute;
-		bottom: 10px;
-		left: 10px;
-		right: 10px;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-	.photo-overlay span {
-		background: var(--primary-soft);
-		color: var(--primary);
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		padding: 8px 10px;
-		border-radius: 6px;
-		font-size: 11px;
-	}
-	.photo-overlay button {
-		background: white;
-		padding: 8px 12px;
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		font-size: 11px;
-		min-height: 40px;
-	}
-	.field-help {
-		color: var(--muted);
-		font-size: 10px;
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		margin: 10px 0 24px;
 	}
 	.required {
 		color: var(--danger);
