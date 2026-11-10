@@ -1,0 +1,67 @@
+# Dependencies and generated outputs
+node_modules/
+/.svelte-kit/
+/build/
+/dist/
+/.output/
+/coverage/
+*.tsbuildinfo
+
+# Hosting and emulator state
+/.vercel/
+/.netlify/
+/.wrangler/
+/.firebase/
+firebase-export-*/
+
+# Local environment and credentials; commit only the empty template
+.env
+.env.*
+!.env.example
+.aws/
+.gcloud/
+credentials*.json
+*service-account*.json
+*serviceAccount*.json
+*-adminsdk-*.json
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc.local
+
+# Logs, temporary files, and test/browser artifacts
+*.log
+/test-results/
+/playwright-report/
+/blob-report/
+/.cache/
+/.tmp/
+/tmp/
+/uploads/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Local agent tooling; not required to build the application
+/.agents/
+/.claude/
+/.codex/
+/skills-lock.json
+
+# Editor/OS state; retain shared workspace recommendations
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# Bun is the package manager; bun.lock is tracked
+/package-lock.json
+/npm-shrinkwrap.json
+/pnpm-lock.yaml
+/yarn.lock
+/bun.lockb
