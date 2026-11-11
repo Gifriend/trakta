@@ -9,6 +9,9 @@ const english: Record<string, string> = {
 	'Efek kamera': 'Camera effect',
 	Terang: 'Bright',
 	'Hitam putih': 'Black and white',
+	'Warna hidup': 'Vivid',
+	'Kontras tinggi': 'High contrast',
+	Lembut: 'Soft',
 	'Langsung ke konten': 'Skip to content',
 	'Catat presensi masuk dan pulang, lengkapi dengan foto, dan simpan jejak kehadiran harianmu dengan Trakta.':
 		'Check in and out with a photo and track your daily attendance with Trakta.',
