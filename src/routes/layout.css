@@ -23,6 +23,66 @@
 	--danger-soft: #fff0ef;
 	--warning: #8f5a16;
 	--warning-soft: #fff5e0;
+	--control-border: #dbe2dd;
+	--control-radius: 7px;
+}
+:root[data-theme='neo'] {
+	--ink: #211c29;
+	--muted: #52495b;
+	--primary: #4932a6;
+	--primary-hover: #34227d;
+	--primary-soft: #ded3ff;
+	--forest: #28213d;
+	--lime: #ffdf66;
+	--surface: #fffefa;
+	--background: #fff3d5;
+	--subtle: #fff6dc;
+	--border: #211c29;
+	--ring: #5b3dc7;
+	--control-border: var(--ink);
+	--control-radius: 2px;
+	--skeleton-fill: #dccdf0;
+	--skeleton-radius: 2px;
+}
+:root[data-theme='neo'] :is(.card, .today-card, .tip-card, .install-card, .photo-dialog) {
+	border: 2px solid var(--ink);
+	border-radius: 3px;
+	box-shadow: 4px 4px 0 var(--ink);
+}
+:root[data-theme='neo'] .tip-card {
+	background: #ffd4e8;
+}
+:root[data-theme='neo'] :is(.button, .mode-options label, .photo-frame, .date-label) {
+	border: 2px solid var(--ink);
+	border-radius: var(--control-radius);
+}
+:root[data-theme='neo'] .button:not(:disabled) {
+	box-shadow: 2px 2px 0 var(--ink);
+}
+:root[data-theme='neo'] .button:not(:disabled):active {
+	box-shadow: none;
+}
+:root[data-theme='neo'] .button.primary {
+	background: var(--lime);
+	color: var(--ink);
+}
+:root[data-theme='neo'] .button.primary:hover:not(:disabled) {
+	background: #ffcc32;
+}
+:root[data-theme='neo'] :is(input:not([type='radio']), textarea, select) {
+	border-width: 2px;
+	border-color: var(--control-border);
+	border-radius: var(--control-radius);
+}
+:root[data-theme='neo'] :is(.brand-mark, .nav-link, .notice, .stat-icon, .icon-tile) {
+	border-radius: var(--control-radius);
+}
+:root[data-theme='neo'] :is(.topbar, .sidebar) {
+	border-color: var(--ink);
+	border-width: 2px;
+}
+:root[data-theme='neo'] :is(h1, h2) {
+	font-weight: 800;
 }
 * {
 	box-sizing: border-box;

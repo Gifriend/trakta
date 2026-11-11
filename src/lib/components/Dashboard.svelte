@@ -11,6 +11,7 @@
 	import AttendanceHistory from './AttendanceHistory.svelte';
 	import PwaInstall from './PwaInstall.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
+	import Preferences from './Preferences.svelte';
 	let { user }: { user: Pick<User, 'uid' | 'displayName' | 'email'> } = $props();
 	let days = $state.raw<AttendanceDay[]>([]);
 	let loading = $state(true);
@@ -114,6 +115,7 @@
 		<header class="topbar">
 			<div class="desktop-breadcrumb">Ruang kerja <span>/</span> <strong>Ringkasan</strong></div>
 			<div class="mobile-logo"><Brand /></div>
+			<div class="dashboard-preferences"><Preferences /></div>
 			<div class="topbar-right">
 				<span class={['connection', { offline: !online }]}
 					><span></span>{online ? 'Terhubung' : 'Offline'}</span
@@ -901,7 +903,8 @@
 			display: none;
 		}
 		.topbar {
-			height: 70px;
+			height: auto;
+			min-height: 70px;
 		}
 		.topbar-right {
 			gap: 12px;
@@ -915,7 +918,14 @@
 			padding: 25px 18px 0;
 		}
 		.topbar {
-			padding: 0 19px;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 8px;
+			padding: 12px 19px;
+		}
+		.dashboard-preferences {
+			grid-column: 1 / -1;
+			grid-row: 2;
 		}
 		.topbar-divider,
 		.topbar-right .avatar {

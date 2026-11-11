@@ -3,6 +3,7 @@
 	import { firebaseConfigured } from '#lib/firebase/client.ts';
 	import Brand from './Brand.svelte';
 	import Icon from './Icon.svelte';
+	import Preferences from './Preferences.svelte';
 	let mode = $state<'login' | 'register' | 'reset'>('login');
 	let name = $state('');
 	let email = $state('');
@@ -65,7 +66,10 @@
 		</div>
 	</section>
 	<main id="main" class="auth-main">
-		<div class="mobile-brand"><Brand /></div>
+		<div class="auth-toolbar">
+			<div class="mobile-brand"><Brand /></div>
+			<Preferences />
+		</div>
 		<div class="auth-form-wrap">
 			<span class="mini-label">RUANG KERJAMU, LEBIH TERATUR</span>
 			<h2>
@@ -330,6 +334,14 @@
 		max-width: 410px;
 		margin: auto 0;
 		padding: 55px 0;
+	}
+	.auth-toolbar {
+		width: 100%;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 	}
 	.mini-label {
 		color: var(--primary);
