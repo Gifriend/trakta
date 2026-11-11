@@ -1,13 +1,18 @@
 <script lang="ts">
 	import './layout.css';
 	import { onMount } from 'svelte';
-	import { setPreferences, type Theme } from '#lib/preferences.ts';
+	import { setPreferences, type DisplayMode, type Theme } from '#lib/preferences.ts';
 	import { translate, type Locale } from '#lib/i18n.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
 	let theme = $state<Theme>('classic');
+	let mode = $state<DisplayMode>('light');
 	let locale = $state<Locale>('id');
+	const themeColors = {
+		classic: { light: '#124e43', dark: '#111d19' },
+		neo: { light: '#ffdf66', dark: '#1a1422' }
+	};
 
 	function savePreference(key: string, value: string) {
 		try {
@@ -29,6 +34,14 @@
 			document.documentElement.dataset.theme = value;
 			savePreference('trakta.theme', value);
 		},
+		get mode() {
+			return mode;
+		},
+		setMode(value) {
+			mode = value;
+			document.documentElement.dataset.mode = value;
+			savePreference('trakta.mode', value);
+		},
 		get locale() {
 			return locale;
 		},
@@ -42,6 +55,7 @@
 
 	onMount(() => {
 		if (document.documentElement.dataset.theme === 'neo') theme = 'neo';
+		if (document.documentElement.dataset.mode === 'dark') mode = 'dark';
 		if (document.documentElement.lang === 'en') locale = 'en';
 	});
 </script>
@@ -50,7 +64,7 @@
 	<link rel="icon" href="/icon.svg" type="image/svg+xml" />
 	<link rel="manifest" href="/manifest.webmanifest" />
 	<link rel="apple-touch-icon" href="/icons/icon-192.png" />
-	<meta name="theme-color" content={theme === 'neo' ? '#ffdf66' : '#124e43'} />
+	<meta name="theme-color" content={themeColors[theme][mode]} />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-title" content="Trakta" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="default" />

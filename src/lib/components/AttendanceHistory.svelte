@@ -277,7 +277,7 @@
 		border: 1px solid var(--border);
 		border-radius: 16px;
 		padding: 22px;
-		background: white;
+		background: var(--surface);
 		margin: auto;
 		color: var(--ink);
 	}

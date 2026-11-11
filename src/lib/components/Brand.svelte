@@ -33,7 +33,7 @@
 		margin-right: 9px;
 		background: var(--primary);
 		border-radius: 11px;
-		color: white;
+		color: var(--on-primary);
 	}
 	.light {
 		color: white;

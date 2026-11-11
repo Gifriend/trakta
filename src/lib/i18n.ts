@@ -2,6 +2,9 @@ export type Locale = 'id' | 'en';
 
 const english: Record<string, string> = {
 	Tema: 'Theme',
+	Tampilan: 'Appearance',
+	Cerah: 'Light',
+	Gelap: 'Dark',
 	Bahasa: 'Language',
 	'Efek kamera': 'Camera effect',
 	Terang: 'Bright',

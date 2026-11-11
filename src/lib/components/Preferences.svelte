@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getPreferences, type Theme } from '#lib/preferences.ts';
+	import { getPreferences, type DisplayMode, type Theme } from '#lib/preferences.ts';
 	import type { Locale } from '#lib/i18n.ts';
 
 	const preferences = getPreferences();
@@ -16,6 +16,17 @@
 		>
 			<option value="classic">Trakta</option>
 			<option value="neo">Neobrutalism</option>
+		</select>
+	</div>
+	<div class="preference-control">
+		<label for="trakta-mode">{t('Tampilan')}</label>
+		<select
+			id="trakta-mode"
+			value={preferences.mode}
+			onchange={(event) => preferences.setMode(event.currentTarget.value as DisplayMode)}
+		>
+			<option value="light">{t('Cerah')}</option>
+			<option value="dark">{t('Gelap')}</option>
 		</select>
 	</div>
 	<div class="preference-control">

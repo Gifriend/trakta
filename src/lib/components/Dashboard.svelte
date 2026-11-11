@@ -450,7 +450,7 @@
 		font-size: 11px;
 		font-weight: 650;
 		color: var(--primary);
-		background: #e3eee6;
+		background: var(--avatar-surface);
 		flex-shrink: 0;
 	}
 	.avatar.small {
@@ -557,7 +557,7 @@
 		padding: 11px 13px;
 		border: 1px solid var(--border);
 		border-radius: 7px;
-		background: white;
+		background: var(--surface);
 		white-space: nowrap;
 	}
 	.stats-grid {
@@ -585,12 +585,12 @@
 		background: var(--primary-soft);
 	}
 	.orange {
-		color: #a75a21;
-		background: #fff0e3;
+		color: var(--arrival-ink);
+		background: var(--arrival-surface);
 	}
 	.blue {
-		color: #5063a2;
-		background: #edf0fd;
+		color: var(--departure-ink);
+		background: var(--departure-surface);
 	}
 	.stat-card p {
 		color: var(--muted);
@@ -719,8 +719,8 @@
 		line-height: 1.5;
 	}
 	.tip-card {
-		background: #eff0e5;
-		border: 1px solid #e3e5d6;
+		background: var(--tip-surface);
+		border: 1px solid var(--tip-border);
 		border-radius: 12px;
 		padding: 24px;
 	}
@@ -736,18 +736,18 @@
 	.tip-card p {
 		font-size: 11px;
 		line-height: 1.9;
-		color: #5b685b;
+		color: var(--tip-ink);
 		margin: 0;
 	}
 	.tip-line {
 		width: 28px;
 		height: 2px;
-		background: #c2c9aa;
+		background: var(--tip-rule);
 		margin: 19px 0 12px;
 	}
 	.tip-card > span:last-child {
 		font-size: 9px;
-		color: #5b685b;
+		color: var(--tip-ink);
 	}
 	.privacy-note {
 		display: flex;

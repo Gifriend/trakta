@@ -1,6 +1,7 @@
 @import 'tailwindcss' source('../');
 
 :root {
+	color-scheme: light;
 	font-family: 'Inter', 'Segoe UI', sans-serif;
 	color: var(--ink);
 	background: var(--background);
@@ -10,6 +11,7 @@
 	--ink: #1f302a;
 	--muted: #65736c;
 	--primary: #176b54;
+	--on-primary: #fff;
 	--primary-hover: #105440;
 	--primary-soft: #edf5ee;
 	--forest: #124e43;
@@ -25,6 +27,20 @@
 	--warning-soft: #fff5e0;
 	--control-border: #dbe2dd;
 	--control-radius: 7px;
+	--control-hover: #b9cabe;
+	--placeholder: #7c8881;
+	--warning-border: #ecd9b5;
+	--danger-border: #f1d2cf;
+	--success-border: #ccdfd2;
+	--avatar-surface: #e3eee6;
+	--arrival-ink: #a75a21;
+	--arrival-surface: #fff0e3;
+	--departure-ink: #5063a2;
+	--departure-surface: #edf0fd;
+	--tip-surface: #eff0e5;
+	--tip-border: #e3e5d6;
+	--tip-ink: #5b685b;
+	--tip-rule: #c2c9aa;
 }
 :root[data-theme='neo'] {
 	--ink: #211c29;
@@ -43,14 +59,66 @@
 	--control-radius: 2px;
 	--skeleton-fill: #dccdf0;
 	--skeleton-radius: 2px;
+	--tip-surface: #ffd4e8;
+}
+:root[data-mode='dark'] {
+	color-scheme: dark;
+	--ink: #e8f2ed;
+	--muted: #a4b7ad;
+	--primary: #87dab8;
+	--on-primary: #10291f;
+	--primary-hover: #a6e7cc;
+	--primary-soft: #244039;
+	--forest: #193d34;
+	--surface: #1b2b25;
+	--background: #111d19;
+	--subtle: #22352e;
+	--border: #354a41;
+	--ring: #9de6c7;
+	--danger: #ffaaa6;
+	--danger-soft: #462a29;
+	--warning: #f7cc8c;
+	--warning-soft: #392d1e;
+	--control-border: #597167;
+	--control-hover: var(--ring);
+	--placeholder: var(--muted);
+	--warning-border: #785d35;
+	--danger-border: #88504c;
+	--success-border: #487360;
+	--skeleton-fill: #3a5147;
+	--avatar-surface: var(--primary-soft);
+	--arrival-ink: #ffbd8d;
+	--arrival-surface: #493025;
+	--departure-ink: #c2ceff;
+	--departure-surface: #2e3658;
+	--tip-surface: #273427;
+	--tip-border: #465641;
+	--tip-ink: #c0d0bb;
+	--tip-rule: #829478;
+}
+:root[data-theme='neo'][data-mode='dark'] {
+	--ink: #f4eafa;
+	--muted: #c1b1cc;
+	--primary: #d4b8ff;
+	--on-primary: #21172e;
+	--primary-hover: #ebd9ff;
+	--primary-soft: #40304f;
+	--forest: #352849;
+	--surface: #261e30;
+	--background: #1a1422;
+	--subtle: #30263b;
+	--border: #695872;
+	--ring: #e1b9ff;
+	--control-border: #9d86ab;
+	--skeleton-fill: #50415c;
+	--tip-surface: #492b43;
+	--tip-ink: #e4c7e1;
+	--tip-rule: #c38ab9;
 }
 :root[data-theme='neo'] :is(.card, .today-card, .tip-card, .install-card, .photo-dialog) {
 	border: 2px solid var(--ink);
 	border-radius: 3px;
 	box-shadow: 4px 4px 0 var(--ink);
-}
-:root[data-theme='neo'] .tip-card {
-	background: #ffd4e8;
 }
 :root[data-theme='neo'] :is(.button, .mode-options label, .photo-frame, .date-label) {
 	border: 2px solid var(--ink);
@@ -64,7 +132,7 @@
 }
 :root[data-theme='neo'] .button.primary {
 	background: var(--lime);
-	color: var(--ink);
+	color: #211c29;
 }
 :root[data-theme='neo'] .button.primary:hover:not(:disabled) {
 	background: #ffcc32;
@@ -134,7 +202,7 @@ input,
 textarea {
 	display: block;
 	width: 100%;
-	border: 1px solid #dbe2dd;
+	border: 1px solid var(--control-border);
 	border-radius: 7px;
 	background: var(--surface);
 	color: var(--ink);
@@ -145,7 +213,7 @@ textarea {
 }
 input::placeholder,
 textarea::placeholder {
-	color: #7c8881;
+	color: var(--placeholder);
 }
 input:focus,
 textarea:focus {
@@ -185,19 +253,19 @@ h2 {
 }
 .primary {
 	background: var(--primary);
-	color: white;
+	color: var(--on-primary);
 }
 .primary:hover:not(:disabled) {
 	background: var(--primary-hover);
 }
 .secondary {
 	background: var(--surface);
-	border-color: #dbe2dd;
+	border-color: var(--control-border);
 	color: var(--ink);
 }
 .secondary:hover:not(:disabled) {
 	background: var(--primary-soft);
-	border-color: #b9cabe;
+	border-color: var(--control-hover);
 }
 .text-button {
 	color: var(--primary);
@@ -244,20 +312,20 @@ h2 {
 	padding: 14px 16px;
 	background: var(--warning-soft);
 	color: var(--warning);
-	border: 1px solid #ecd9b5;
+	border: 1px solid var(--warning-border);
 	border-radius: 8px;
 	font-size: 13px;
 	line-height: 1.65;
 }
 .notice.error {
 	background: var(--danger-soft);
-	border-color: #f1d2cf;
+	border-color: var(--danger-border);
 	color: var(--danger);
 	margin: 15px 0;
 }
 .notice.success {
 	background: var(--primary-soft);
-	border-color: #ccdfd2;
+	border-color: var(--success-border);
 	color: var(--primary);
 }
 .skeleton {
@@ -275,7 +343,7 @@ h2 {
 	top: -100px;
 	left: 16px;
 	z-index: 100;
-	color: white;
+	color: var(--on-primary);
 	background: var(--primary);
 	padding: 12px 18px;
 	border-radius: 6px;
