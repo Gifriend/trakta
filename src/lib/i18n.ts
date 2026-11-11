@@ -206,6 +206,9 @@ const english: Record<string, string> = {
 	'Foto belum berhasil diambil. Coba lagi atau pilih galeri/file.':
 		'Unable to capture a photo. Try again or choose a file.',
 	'Pratinjau kamera presensi': 'Attendance camera preview',
+	'Koreksi kiri-kanan': 'Correct mirroring',
+	'Aktifkan jika tulisan di kamera terlihat terbalik.':
+		'Turn this on if text in the camera looks reversed.',
 	'Tutup kamera': 'Close camera',
 	'Membuka kamera… Izinkan akses jika diminta.': 'Opening camera… Allow access if prompted.',
 	'Mengambil foto kamera…': 'Capturing photo…',

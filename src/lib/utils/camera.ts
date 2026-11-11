@@ -11,10 +11,13 @@ export type CameraEffect = keyof typeof CAMERA_EFFECTS;
 export function drawCameraFrame(
 	context: CanvasRenderingContext2D,
 	video: HTMLVideoElement,
-	effect: CameraEffect
+	effect: CameraEffect,
+	correctMirroring: boolean
 ) {
-	// Draw in the camera's original orientation with no horizontal transform.
+	context.save();
+	if (correctMirroring) context.setTransform(-1, 0, 0, 1, context.canvas.width, 0);
 	context.drawImage(video, 0, 0);
+	context.restore();
 	if (effect === 'natural') return;
 
 	// Use pixel operations so the saved photo has the effect even without canvas filter support.

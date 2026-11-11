@@ -25,9 +25,11 @@
 	let frameReady = $state(false);
 	let taking = $state(false);
 	let effect = $state<CameraEffect>('natural');
+	let correctMirroring = $state(false);
 	let video = $state<HTMLVideoElement>();
 	let fileInput: HTMLInputElement;
 	let stream: MediaStream | undefined;
+	let correctionKey = 'trakta.cameraCorrection';
 	let requestVersion = 0;
 	let destroyed = false;
 
@@ -82,6 +84,14 @@
 				return;
 			}
 			stream = nextStream;
+			const deviceId = stream.getVideoTracks()[0]?.getSettings().deviceId;
+			correctionKey = deviceId ? `trakta.cameraCorrection.${deviceId}` : 'trakta.cameraCorrection';
+			correctMirroring = false;
+			try {
+				correctMirroring = localStorage.getItem(correctionKey) === 'true';
+			} catch {
+				// Use the original camera frame when storage is unavailable.
+			}
 			await tick();
 			if (version !== requestVersion || !video) return;
 			video.srcObject = nextStream;
@@ -96,6 +106,15 @@
 		}
 	}
 
+	function changeOrientation(corrected: boolean) {
+		correctMirroring = corrected;
+		try {
+			localStorage.setItem(correctionKey, String(corrected));
+		} catch {
+			// The correction still applies to this capture.
+		}
+	}
+
 	async function takePhoto() {
 		if (!video || !frameReady || disabled || processing || taking) return;
 		taking = true;
@@ -107,7 +126,7 @@
 			canvas.height = video.videoHeight;
 			const context = canvas.getContext('2d');
 			if (!context) throw new Error('Canvas unavailable');
-			drawCameraFrame(context, video, effect);
+			drawCameraFrame(context, video, effect, correctMirroring);
 			const blob = await new Promise<Blob>((resolve, reject) => {
 				canvas.toBlob(
 					(value) => (value ? resolve(value) : reject(new Error('Capture failed'))),
@@ -175,6 +194,7 @@
 				autoplay
 				playsinline
 				muted
+				class:corrected={correctMirroring}
 				style:filter={CAMERA_EFFECTS[effect].filter}
 				aria-label={t('Pratinjau kamera presensi')}
 				onloadeddata={(event) => {
@@ -233,6 +253,21 @@
 				{/each}
 			</select>
 		</div>
+		<div class="camera-orientation">
+			<label>
+				<input
+					type="checkbox"
+					checked={correctMirroring}
+					disabled={disabled || taking}
+					aria-describedby="camera-orientation-help"
+					onchange={(event) => changeOrientation(event.currentTarget.checked)}
+				/>
+				{t('Koreksi kiri-kanan')}
+			</label>
+			<p id="camera-orientation-help" class="field-help">
+				{t('Aktifkan jika tulisan di kamera terlihat terbalik.')}
+			</p>
+		</div>
 	{/if}
 	<div class="source-options">
 		<button
@@ -278,7 +313,7 @@
 		position: relative;
 	}
 	.photo-frame {
-		border: 1px dashed #b9cac3;
+		border: 1px dashed var(--control-border);
 		border-radius: 10px;
 		background: var(--subtle);
 		min-height: 214px;
@@ -329,6 +364,9 @@
 		object-fit: contain;
 		transform: none;
 	}
+	video.corrected {
+		transform: scaleX(-1);
+	}
 	.close-camera {
 		position: absolute;
 		top: 10px;
@@ -376,6 +414,27 @@
 	}
 	.camera-effect label {
 		margin: 0;
+	}
+	.camera-orientation {
+		margin-top: 4px;
+	}
+	.camera-orientation label {
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		min-height: 44px;
+		width: fit-content;
+		margin: 0;
+		cursor: pointer;
+	}
+	.camera-orientation input {
+		width: 16px;
+		height: 16px;
+		padding: 0;
+		accent-color: var(--primary);
+	}
+	.camera-orientation .field-help {
+		margin-top: 0;
 	}
 	.shutter {
 		position: absolute;
