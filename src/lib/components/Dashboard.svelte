@@ -13,6 +13,7 @@
 	import PwaInstall from './PwaInstall.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	import Preferences from './Preferences.svelte';
+	import MobileSettings from './MobileSettings.svelte';
 
 	const preferences = getPreferences();
 	const { t } = preferences;
@@ -120,22 +121,39 @@
 		</div>
 	</aside>
 	<div class="main-shell">
-		<header class="topbar">
+		<header class="topbar mobile-header">
 			<div class="desktop-breadcrumb">
 				{t('Ruang kerja')} <span>/</span> <strong>{t('Ringkasan')}</strong>
 			</div>
 			<div class="mobile-logo"><Brand /></div>
 			<div class="dashboard-preferences"><Preferences /></div>
 			<div class="topbar-right">
-				<span class={['connection', { offline: !online }]}
-					><span></span>{online ? t('Terhubung') : t('Offline')}</span
-				><span class="topbar-divider"></span><span class="avatar small">{initials}</span><button
-					type="button"
-					class="mobile-logout icon-button"
-					aria-label={t('Keluar dari akun')}
-					onclick={signOut}
-					disabled={signingOut}><Icon name="exit" size={18} /></button
-				>
+				<span class={['connection', { offline: !online }]}>
+					<span></span>{online ? t('Terhubung') : t('Offline')}
+				</span>
+				<span class="topbar-divider"></span>
+				<span class="avatar small">{initials}</span>
+				<MobileSettings camera>
+					{#snippet children(close)}
+						<nav aria-label={t('Navigasi utama')}>
+							<a href="#ringkasan" class="nav-link" onclick={close}
+								><Icon name="grid" size={18} />{t('Ringkasan')}</a
+							>
+							<a href="#riwayat" class="nav-link" onclick={close}
+								><Icon name="calendar" size={18} />{t('Riwayat presensi')}</a
+							>
+							<button
+								type="button"
+								class="nav-link settings-logout"
+								disabled={signingOut}
+								onclick={() => {
+									close();
+									void signOut();
+								}}><Icon name="exit" size={18} />{t('Keluar dari akun')}</button
+							>
+						</nav>
+					{/snippet}
+				</MobileSettings>
 			</div>
 		</header>
 		<main id="main">
@@ -354,17 +372,18 @@
 		height: 19px;
 	}
 	.app-shell {
+		--shell-gutter: clamp(16px, 5vw, 25px);
 		display: flex;
 		min-height: 100svh;
 	}
 	.sidebar {
-		width: 238px;
+		width: var(--sidebar-width);
 		background: var(--surface);
 		border-right: 1px solid var(--border);
-		padding: 31px 21px 0;
+		padding: 31px var(--sidebar-gutter) 0;
 		position: fixed;
 		inset: 0 auto 0 0;
-		display: flex;
+		display: none;
 		flex-direction: column;
 		z-index: 20;
 		overflow-y: auto;
@@ -404,6 +423,11 @@
 	.nav-link:hover {
 		background: var(--subtle);
 	}
+	.settings-logout {
+		border: 0;
+		background: transparent;
+		text-align: start;
+	}
 	.nav-dot {
 		margin-left: auto;
 		width: 5px;
@@ -420,7 +444,7 @@
 		align-items: center;
 		gap: 10px;
 		border-top: 1px solid var(--border);
-		margin: 25px -21px 0;
+		margin: 25px calc(-1 * var(--sidebar-gutter)) 0;
 		padding: 21px 16px;
 	}
 	.sidebar-user > div {
@@ -459,19 +483,21 @@
 		font-size: 10px;
 	}
 	.main-shell {
-		margin-left: 238px;
-		width: calc(100% - 238px);
+		width: 100%;
+		min-width: 0;
 	}
 	.topbar {
-		height: 77px;
 		border-bottom: 1px solid var(--border);
-		background: var(--surface);
-		padding: 0 38px;
+		padding: calc(8px + env(safe-area-inset-top))
+			max(var(--shell-gutter), env(safe-area-inset-right)) 8px
+			max(var(--shell-gutter), env(safe-area-inset-left));
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 12px;
 	}
 	.desktop-breadcrumb {
+		display: none;
 		font-size: 11px;
 		color: var(--muted);
 	}
@@ -485,7 +511,7 @@
 	}
 	.topbar-right {
 		display: flex;
-		gap: 20px;
+		gap: 12px;
 		align-items: center;
 	}
 	.connection {
@@ -505,17 +531,21 @@
 		background: var(--warning);
 	}
 	.topbar-divider {
+		display: none;
 		width: 1px;
 		height: 23px;
 		background: var(--border);
 	}
-	.mobile-logo,
-	.mobile-logout,
-	.mobile-install {
+	.topbar-right .avatar,
+	.dashboard-preferences {
 		display: none;
 	}
+	.mobile-logo :global(.brand) {
+		font-size: 26px;
+	}
 	main {
-		padding: 35px 38px 0;
+		padding: 25px max(var(--shell-gutter), env(safe-area-inset-right)) 0
+			max(var(--shell-gutter), env(safe-area-inset-left));
 		max-width: 1300px;
 		margin: 0 auto;
 	}
@@ -524,8 +554,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 16px;
-		margin-bottom: 29px;
-		scroll-margin-top: 25px;
+		margin-bottom: 22px;
 	}
 	.mini-label {
 		font-size: 9px;
@@ -535,7 +564,7 @@
 		margin: 0 0 10px;
 	}
 	h1 {
-		font-size: 34px;
+		font-size: clamp(30px, 4.7vw, 34px);
 		font-weight: 650;
 		letter-spacing: -1.1px;
 		margin: 0 0 10px;
@@ -549,7 +578,7 @@
 		margin: 0;
 	}
 	.date-label {
-		display: flex;
+		display: none;
 		align-items: center;
 		gap: 8px;
 		color: var(--muted);
@@ -562,19 +591,39 @@
 	}
 	.stats-grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 17px;
-		margin-bottom: 26px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 9px;
+		margin-bottom: 18px;
 	}
 	.stat-card {
-		padding: 21px;
+		padding: 16px 12px;
 		display: flex;
-		gap: 15px;
+		gap: 8px;
+		min-width: 0;
+	}
+	.stat-card:last-child {
+		grid-column: 1 / -1;
+		align-items: center;
+	}
+	.stat-card:last-child > div {
+		display: flex;
+		align-items: center;
+		flex: 1;
+		flex-wrap: wrap;
+		gap: 5px 12px;
+	}
+	.stat-card:last-child p {
+		margin: 0;
+		flex: 1;
+	}
+	.stat-card:last-child div > span {
+		display: none;
 	}
 	.stat-icon {
 		border-radius: 10px;
-		padding: 11px;
-		height: 43px;
+		padding: 7px;
+		width: 31px;
+		height: 33px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -598,7 +647,7 @@
 		margin: 0 0 11px;
 	}
 	.stat-card strong {
-		font-size: 29px;
+		font-size: 25px;
 		line-height: 1;
 		letter-spacing: -1px;
 		font-weight: 600;
@@ -620,8 +669,8 @@
 	}
 	.dashboard-grid {
 		display: grid;
-		grid-template-columns: 1.55fr 1fr;
-		gap: 24px;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 18px;
 		margin-bottom: 26px;
 	}
 	.primary-column {
@@ -635,7 +684,7 @@
 	.today-card {
 		background: var(--forest);
 		color: white;
-		padding: 25px;
+		padding: 23px;
 		border-radius: 12px;
 	}
 	.today-card h2 {
@@ -653,11 +702,11 @@
 		color: #d3e1dc;
 	}
 	.live-clock {
-		font-size: 54px;
+		font-size: 46px;
 		line-height: 1.2;
 		font-weight: 450;
 		letter-spacing: -2px;
-		margin-top: 26px;
+		margin-top: 18px;
 		font-variant-numeric: tabular-nums;
 	}
 	.live-clock span {
@@ -719,6 +768,7 @@
 		line-height: 1.5;
 	}
 	.tip-card {
+		display: none;
 		background: var(--tip-surface);
 		border: 1px solid var(--tip-border);
 		border-radius: 12px;
@@ -781,7 +831,7 @@
 		font-size: 18px;
 	}
 	.completed-card {
-		min-height: 515px;
+		min-height: 390px;
 		padding: 40px 25px;
 		display: flex;
 		flex-direction: column;
@@ -849,8 +899,9 @@
 	}
 	.page-footer {
 		display: flex;
+		flex-direction: column;
 		justify-content: space-between;
-		gap: 15px;
+		gap: 8px;
 		padding: 25px 0;
 		color: var(--muted);
 		font-size: 9px;
@@ -863,177 +914,124 @@
 		font-weight: 400;
 		margin-left: 8px;
 	}
-	@media (max-width: 1150px) {
-		.sidebar {
-			width: 210px;
-			padding-left: 15px;
-			padding-right: 15px;
-		}
-		.sidebar-user {
-			margin-left: -15px;
-			margin-right: -15px;
-		}
-		.main-shell {
-			margin-left: 210px;
-			width: calc(100% - 210px);
-		}
+	@media (min-width: 641px) {
 		main {
-			padding: 28px 25px 0;
+			padding-top: 28px;
 		}
-		.topbar {
-			padding: 0 25px;
+		.page-heading {
+			margin-bottom: 29px;
 		}
-		.stat-card {
+		.stats-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 14px;
+			margin-bottom: 26px;
+		}
+		.stat-card,
+		.stat-card:last-child {
 			padding: 17px 14px;
 			gap: 10px;
 		}
+		.stat-card:last-child {
+			grid-column: auto;
+			align-items: stretch;
+		}
+		.stat-card:last-child > div,
+		.stat-card:last-child div > span {
+			display: block;
+		}
+		.stat-card:last-child p {
+			margin-bottom: 11px;
+		}
 		.stat-icon {
+			width: auto;
 			padding: 8px;
 			height: 36px;
 		}
-		.stat-card strong {
-			font-size: 25px;
-		}
-		.date-label {
-			display: none;
-		}
 		.dashboard-grid {
-			gap: 18px;
-			grid-template-columns: 1.4fr 1fr;
+			grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
 		}
 		.today-card,
 		.tip-card {
 			padding: 21px;
 		}
+		.tip-card {
+			display: block;
+		}
+		.live-clock {
+			font-size: 54px;
+			margin-top: 26px;
+		}
+		.completed-card {
+			min-height: 515px;
+		}
+		.page-footer {
+			flex-direction: row;
+			gap: 15px;
+		}
 	}
-	@media (max-width: 900px) {
+	@media (min-width: 901px) {
+		.app-shell {
+			--sidebar-width: 210px;
+			--sidebar-gutter: 15px;
+		}
 		.sidebar {
-			display: none;
+			display: flex;
 		}
 		.main-shell {
-			width: 100%;
-			margin: 0;
+			margin-inline-start: var(--sidebar-width);
+			width: calc(100% - var(--sidebar-width));
 		}
 		.mobile-logo,
 		.mobile-install {
+			display: none;
+		}
+		.desktop-breadcrumb,
+		.dashboard-preferences,
+		.topbar-divider {
 			display: block;
 		}
-		.mobile-logo :global(.brand) {
-			font-size: 26px;
-		}
-		.mobile-logout {
+		.topbar-right .avatar {
 			display: inline-flex;
 		}
-		.desktop-breadcrumb {
-			display: none;
-		}
 		.topbar {
-			height: auto;
-			min-height: 70px;
-		}
-		.topbar-right {
-			gap: 12px;
-		}
-		.page-heading {
-			margin-top: 5px;
+			min-height: 77px;
+			padding: 8px var(--shell-gutter);
 		}
 	}
-	@media (max-width: 640px) {
+	@media (min-width: 1151px) {
+		.app-shell {
+			--shell-gutter: 38px;
+			--sidebar-width: 238px;
+			--sidebar-gutter: 21px;
+		}
 		main {
-			padding: 25px 18px 0;
+			padding-top: 35px;
 		}
-		.topbar {
-			display: grid;
-			grid-template-columns: minmax(0, 1fr) auto;
-			gap: 8px;
-			padding: 12px 19px;
-		}
-		.dashboard-preferences {
-			grid-column: 1 / -1;
-			grid-row: 2;
-		}
-		.topbar-divider,
-		.topbar-right .avatar {
-			display: none;
-		}
-		h1 {
-			font-size: 30px;
-		}
-		.page-heading .muted {
-			font-size: 11px;
+		.date-label {
+			display: flex;
 		}
 		.stats-grid {
-			gap: 9px;
-			grid-template-columns: 1fr 1fr;
-			margin-bottom: 18px;
+			gap: 17px;
 		}
-		.stat-card {
-			padding: 16px 13px;
-			gap: 10px;
-		}
+		.stat-card,
 		.stat-card:last-child {
-			grid-column: 1 / -1;
-			align-items: center;
-			padding: 14px;
-		}
-		.stat-card:last-child > div {
-			display: flex;
-			align-items: center;
-			flex: 1;
-			flex-wrap: wrap;
-			gap: 5px 12px;
-		}
-		.stat-card:last-child p {
-			margin: 0;
-			flex: 1;
-		}
-		.stat-card:last-child strong {
-			font-size: 22px;
-		}
-		.stat-card:last-child div > span {
-			display: none;
-		}
-		.stat-card strong {
-			font-size: 25px;
-		}
-		.stat-card div > span {
-			font-size: 8px;
+			padding: 21px;
+			gap: 15px;
 		}
 		.stat-icon {
-			width: 31px;
-			height: 33px;
+			padding: 11px;
+			height: 43px;
 		}
-		.stat-card p {
-			font-size: 10px;
+		.stat-card strong {
+			font-size: 29px;
 		}
 		.dashboard-grid {
-			grid-template-columns: 1fr;
+			gap: 24px;
+			grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
 		}
-		.support-column {
-			grid-template-columns: 1fr;
-		}
-		.today-card {
-			padding: 23px;
-		}
-		.live-clock {
-			margin-top: 18px;
-			font-size: 46px;
-		}
+		.today-card,
 		.tip-card {
-			display: none;
-		}
-		.page-footer {
-			flex-direction: column;
-			gap: 8px;
-		}
-		.completed-card {
-			min-height: 390px;
-		}
-		.page-heading {
-			margin-bottom: 22px;
-		}
-		.privacy-note {
-			padding-bottom: 5px;
+			padding: 25px;
 		}
 	}
 </style>

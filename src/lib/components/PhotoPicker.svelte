@@ -2,7 +2,8 @@
 	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount, tick } from 'svelte';
 	import type { CompressedPhoto } from '#lib/types/attendance.ts';
-	import { CAMERA_EFFECTS, drawCameraFrame, type CameraEffect } from '#lib/utils/camera.ts';
+	import { CAMERA_EFFECTS, drawCameraFrame } from '#lib/utils/camera.ts';
+	import CameraEffectSelect from './CameraEffectSelect.svelte';
 	import Icon from './Icon.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 
@@ -24,7 +25,6 @@
 	let cameraError = $state('');
 	let frameReady = $state(false);
 	let taking = $state(false);
-	let effect = $state<CameraEffect>('natural');
 	let correctMirroring = $state(false);
 	let video = $state<HTMLVideoElement>();
 	let fileInput: HTMLInputElement;
@@ -126,7 +126,7 @@
 			canvas.height = video.videoHeight;
 			const context = canvas.getContext('2d');
 			if (!context) throw new Error('Canvas unavailable');
-			drawCameraFrame(context, video, effect, correctMirroring);
+			drawCameraFrame(context, video, preferences.cameraEffect, correctMirroring);
 			const blob = await new Promise<Blob>((resolve, reject) => {
 				canvas.toBlob(
 					(value) => (value ? resolve(value) : reject(new Error('Capture failed'))),
@@ -195,7 +195,7 @@
 				playsinline
 				muted
 				class:corrected={correctMirroring}
-				style:filter={CAMERA_EFFECTS[effect].filter}
+				style:filter={CAMERA_EFFECTS[preferences.cameraEffect].filter}
 				aria-label={t('Pratinjau kamera presensi')}
 				onloadeddata={(event) => {
 					frameReady = event.currentTarget.videoWidth > 0 && event.currentTarget.videoHeight > 0;
@@ -241,17 +241,7 @@
 	</div>
 	{#if cameraState === 'live'}
 		<div class="camera-effect">
-			<label for="camera-effect">{t('Efek kamera')}</label>
-			<select
-				id="camera-effect"
-				value={effect}
-				disabled={disabled || taking}
-				onchange={(event) => (effect = event.currentTarget.value as CameraEffect)}
-			>
-				{#each Object.entries(CAMERA_EFFECTS) as [value, setting] (value)}
-					<option {value}>{t(setting.label)}</option>
-				{/each}
-			</select>
+			<CameraEffectSelect disabled={disabled || taking} />
 		</div>
 		<div class="camera-orientation">
 			<label>
@@ -396,24 +386,17 @@
 		pointer-events: none;
 	}
 	.camera-effect {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		flex-wrap: wrap;
-		gap: 8px;
-		margin: 10px 0 0;
+		display: none;
+		margin-top: 10px;
 	}
-	.camera-effect select {
-		min-height: 44px;
-		border: 1px solid var(--control-border);
-		border-radius: var(--control-radius);
-		background: var(--surface);
-		color: var(--ink);
-		padding: 8px;
-		font-size: 13px;
-	}
-	.camera-effect label {
-		margin: 0;
+	@media (min-width: 901px) {
+		.camera-effect {
+			display: block;
+		}
+		.camera-effect :global(.preference-control) {
+			flex-wrap: wrap;
+			justify-content: space-between;
+		}
 	}
 	.camera-orientation {
 		margin-top: 4px;

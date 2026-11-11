@@ -5,6 +5,7 @@
 	import Brand from './Brand.svelte';
 	import Icon from './Icon.svelte';
 	import Preferences from './Preferences.svelte';
+	import MobileSettings from './MobileSettings.svelte';
 	let mode = $state<'login' | 'register' | 'reset'>('login');
 	let name = $state('');
 	let email = $state('');
@@ -72,10 +73,11 @@
 		</div>
 	</section>
 	<main id="main" class="auth-main">
-		<div class="auth-toolbar">
+		<header class="auth-toolbar mobile-header">
 			<div class="mobile-brand"><Brand /></div>
-			<Preferences />
-		</div>
+			<div class="auth-preferences"><Preferences /></div>
+			<MobileSettings />
+		</header>
 		<div class="auth-form-wrap">
 			<span class="mini-label">{t('RUANG KERJAMU, LEBIH TERATUR')}</span>
 			<h2>
@@ -191,13 +193,13 @@
 	.auth-shell {
 		min-height: 100svh;
 		display: grid;
-		grid-template-columns: 46% 54%;
+		grid-template-columns: minmax(0, 1fr);
 	}
 	.auth-story {
 		background: var(--forest);
 		color: white;
 		padding: 42px 9%;
-		display: flex;
+		display: none;
 		flex-direction: column;
 		position: relative;
 		overflow: hidden;
@@ -331,26 +333,36 @@
 		transform: rotate(-4deg);
 	}
 	.auth-main {
+		--auth-gutter: clamp(16px, 6vw, 24px);
 		background: var(--surface);
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
-		padding: 56px;
+		min-width: 0;
+		padding-bottom: 24px;
 	}
 	.auth-form-wrap {
-		width: 100%;
-		max-width: 410px;
+		width: min(100% - var(--auth-gutter) - var(--auth-gutter), 410px);
 		margin: auto 0;
-		padding: 55px 0;
+		padding: 44px 0;
 	}
 	.auth-toolbar {
 		width: 100%;
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
+		border-bottom: 1px solid var(--border);
+		padding: calc(8px + env(safe-area-inset-top))
+			max(var(--auth-gutter), env(safe-area-inset-right)) 8px
+			max(var(--auth-gutter), env(safe-area-inset-left));
+	}
+	.auth-preferences {
+		display: none;
+	}
+	.mobile-brand :global(.brand) {
+		font-size: 26px;
 	}
 	.mini-label {
 		color: var(--primary);
@@ -360,7 +372,7 @@
 	}
 	h2 {
 		margin: 15px 0 10px;
-		font-size: 31px;
+		font-size: clamp(29px, 4vw, 31px);
 		line-height: 1.25;
 		letter-spacing: -1px;
 		font-weight: 650;
@@ -432,6 +444,7 @@
 	.auth-bottom {
 		color: var(--muted);
 		font-size: 11px;
+		padding-inline: var(--auth-gutter);
 	}
 	.setup-notice {
 		margin-top: 24px;
@@ -446,29 +459,30 @@
 		margin: 5px 0 0;
 		line-height: 1.7;
 	}
-	.mobile-brand {
-		display: none;
-	}
-	@media (max-width: 800px) {
+	@media (min-width: 901px) {
 		.auth-shell {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
 		}
 		.auth-story {
-			display: none;
+			display: flex;
 		}
 		.auth-main {
-			padding: 30px 24px;
-			min-height: 100svh;
+			padding: clamp(30px, 4vw, 56px);
 		}
 		.mobile-brand {
+			display: none;
+		}
+		.auth-preferences {
 			display: block;
-			align-self: flex-start;
 		}
 		.auth-form-wrap {
-			padding: 50px 0;
+			width: min(100%, 410px);
+			padding: 55px 0;
 		}
-		h2 {
-			font-size: 29px;
+		.auth-toolbar {
+			border: 0;
+			padding: 0;
+			background: transparent;
 		}
 	}
 </style>

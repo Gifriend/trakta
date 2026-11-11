@@ -6,6 +6,8 @@ const english: Record<string, string> = {
 	Cerah: 'Light',
 	Gelap: 'Dark',
 	Bahasa: 'Language',
+	Pengaturan: 'Settings',
+	'Tutup pengaturan': 'Close settings',
 	'Efek kamera': 'Camera effect',
 	Terang: 'Bright',
 	'Hitam putih': 'Black and white',

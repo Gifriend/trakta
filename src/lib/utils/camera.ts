@@ -56,6 +56,10 @@ export const CAMERA_EFFECTS = {
 
 export type CameraEffect = keyof typeof CAMERA_EFFECTS;
 
+export function isCameraEffect(value: string | null): value is CameraEffect {
+	return value !== null && Object.hasOwn(CAMERA_EFFECTS, value);
+}
+
 export function drawCameraFrame(
 	context: CanvasRenderingContext2D,
 	video: HTMLVideoElement,

@@ -2,6 +2,8 @@
 
 :root {
 	color-scheme: light;
+	--mobile-header-height: calc(62px + env(safe-area-inset-top));
+	scroll-padding-top: calc(var(--mobile-header-height) + 10px);
 	font-family: 'Inter', 'Segoe UI', sans-serif;
 	color: var(--ink);
 	background: var(--background);
@@ -228,6 +230,55 @@ label {
 	font-size: 12px;
 	font-weight: 600;
 	margin-bottom: 9px;
+}
+.mobile-header {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 30;
+	min-height: var(--mobile-header-height);
+	background: var(--surface);
+}
+.preference-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.preference-control label {
+	margin: 0;
+	font-size: 12px;
+}
+.preference-control select {
+	width: auto;
+	max-width: 100%;
+	min-height: 44px;
+	padding: 6px 8px;
+	border: 1px solid var(--control-border);
+	border-radius: var(--control-radius);
+	background: var(--surface);
+	color: var(--ink);
+	font-size: 13px;
+}
+.preference-control select:focus-visible {
+	outline: 3px solid var(--ring);
+	outline-offset: 3px;
+}
+.settings-sheet .preference-control {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+	gap: 12px;
+}
+.settings-sheet .preference-control select {
+	width: 100%;
+	font-size: 16px;
+}
+@media (min-width: 901px) {
+	:root {
+		scroll-padding-top: 0;
+	}
+	.mobile-header {
+		position: static;
+		min-height: 0;
+	}
 }
 h1,
 h2,

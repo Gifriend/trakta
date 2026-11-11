@@ -1,5 +1,6 @@
 import { createContext } from 'svelte';
 import type { Locale } from './i18n';
+import type { CameraEffect } from './utils/camera';
 
 export type DisplayMode = 'light' | 'dark';
 
@@ -22,8 +23,10 @@ export const [getPreferences, setPreferences] = createContext<{
 	readonly theme: Theme;
 	readonly mode: DisplayMode;
 	readonly locale: Locale;
+	readonly cameraEffect: CameraEffect;
 	setTheme: (theme: Theme) => void;
 	setMode: (mode: DisplayMode) => void;
 	setLocale: (locale: Locale) => void;
+	setCameraEffect: (effect: CameraEffect) => void;
 	t: (message: string, values?: Record<string, string>) => string;
 }>();

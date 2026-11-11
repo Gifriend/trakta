@@ -10,12 +10,14 @@
 		type Theme
 	} from '#lib/preferences.ts';
 	import { translate, type Locale } from '#lib/i18n.ts';
+	import { isCameraEffect, type CameraEffect } from '#lib/utils/camera.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
 	let theme = $state<Theme>('classic');
 	let mode = $state<DisplayMode>('light');
 	let locale = $state<Locale>('id');
+	let cameraEffect = $state<CameraEffect>('natural');
 
 	function savePreference(key: string, value: string) {
 		try {
@@ -53,6 +55,13 @@
 			document.documentElement.lang = value;
 			savePreference('trakta.locale', value);
 		},
+		get cameraEffect() {
+			return cameraEffect;
+		},
+		setCameraEffect(value) {
+			cameraEffect = value;
+			savePreference('trakta.cameraEffect', value);
+		},
 		t
 	});
 
@@ -61,6 +70,12 @@
 		if (isTheme(savedTheme)) theme = savedTheme;
 		if (document.documentElement.dataset.mode === 'dark') mode = 'dark';
 		if (document.documentElement.lang === 'en') locale = 'en';
+		try {
+			const savedEffect = localStorage.getItem('trakta.cameraEffect');
+			if (isCameraEffect(savedEffect)) cameraEffect = savedEffect;
+		} catch {
+			// Use the default effect when storage is unavailable.
+		}
 	});
 </script>
 
