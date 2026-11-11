@@ -5,6 +5,7 @@
 	import { loadPhoto } from '#lib/firebase/attendance.ts';
 	import { friendlyError } from '#lib/firebase/auth.ts';
 	import Icon from './Icon.svelte';
+	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	let { days, uid, loading }: { days: AttendanceDay[]; uid: string; loading: boolean } = $props();
 	let expanded = $state(false);
 	let photo = $state('');
@@ -50,9 +51,10 @@
 				>{expanded ? 'Ringkas' : 'Lihat semua'} <Icon name="arrow" size={15} /></button
 			>{/if}
 	</div>
-	{#if loading}<div class="empty-history" role="status">
-			<span class="spinner"></span> Mengambil riwayat presensi…
-		</div>{:else if !days.length}<div class="empty-history">
+	{#if loading}<LoadingSkeleton
+			variant="history"
+			label="Mengambil riwayat presensi…"
+		/>{:else if !days.length}<div class="empty-history">
 			<div class="empty-icon"><Icon name="calendar" size={26} /></div>
 			<strong>Setiap perjalanan punya awal.</strong>
 			<p>Presensi pertamamu akan muncul di sini.<br />Mulai dengan mencatat kehadiran hari ini.</p>
@@ -129,7 +131,7 @@
 			onclick={() => photoDialog.close()}><Icon name="close" /></button
 		>
 	</div>
-	{#if busy}<p class="muted" role="status">Mengambil foto…</p>{:else if error}<p
+	{#if busy}<LoadingSkeleton variant="photo" label="Mengambil foto…" />{:else if error}<p
 			class="notice error"
 			role="alert"
 		>

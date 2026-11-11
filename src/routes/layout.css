@@ -209,6 +209,16 @@ h2 {
 	display: inline-block;
 	animation: spin 800ms linear infinite;
 }
+.skeleton {
+	background: var(--skeleton-fill, #e5ece8);
+	border-radius: var(--skeleton-radius, 8px);
+	animation: skeleton-pulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes skeleton-pulse {
+	to {
+		opacity: 0.48;
+	}
+}
 .skip-link {
 	position: fixed;
 	top: -100px;

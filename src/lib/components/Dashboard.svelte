@@ -10,6 +10,7 @@
 	import AttendanceForm from './AttendanceForm.svelte';
 	import AttendanceHistory from './AttendanceHistory.svelte';
 	import PwaInstall from './PwaInstall.svelte';
+	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	let { user }: { user: Pick<User, 'uid' | 'displayName' | 'email'> } = $props();
 	let days = $state.raw<AttendanceDay[]>([]);
 	let loading = $state(true);
@@ -150,60 +151,70 @@
 			{#if !online}<div class="notice offline-notice" role="status">
 					<Icon name="wifi" size={17} /> Kamu sedang offline. Presensi baru memerlukan internet.
 				</div>{/if}
-			<section class="stats-grid" aria-label="Ringkasan kehadiran">
-				<div class="card stat-card">
-					<span class="stat-icon green"><Icon name="enter" size={20} /></span>
-					<div>
-						<p>Jam masuk</p>
-						<strong
-							>{formatTime(today?.checkIn.timestamp?.toDate())}<small
-								>{today?.checkIn ? 'WIB' : ''}</small
-							></strong
-						><span
-							>{loading
-								? 'Memuat data…'
-								: loadError
-									? 'Data belum tersedia'
-									: today?.checkIn
-										? 'Selamat bekerja hari ini'
-										: 'Belum ada presensi masuk'}</span
-						>
+			<section class="stats-grid" aria-label="Ringkasan kehadiran" aria-busy={loading}>
+				{#if loading}
+					{#each ['masuk', 'pulang', 'bulan'] as item (item)}
+						<div class="card stat-card" aria-hidden="true">
+							<span class="skeleton stat-icon placeholder-icon"></span>
+							<div class="stat-placeholder">
+								<span class="skeleton"></span>
+								<span class="skeleton"></span>
+							</div>
+						</div>
+					{/each}
+				{:else}
+					<div class="card stat-card">
+						<span class="stat-icon green"><Icon name="enter" size={20} /></span>
+						<div>
+							<p>Jam masuk</p>
+							<strong
+								>{formatTime(today?.checkIn.timestamp?.toDate())}<small
+									>{today?.checkIn ? 'WIB' : ''}</small
+								></strong
+							><span
+								>{loading
+									? 'Memuat data…'
+									: loadError
+										? 'Data belum tersedia'
+										: today?.checkIn
+											? 'Selamat bekerja hari ini'
+											: 'Belum ada presensi masuk'}</span
+							>
+						</div>
 					</div>
-				</div>
-				<div class="card stat-card">
-					<span class="stat-icon orange"><Icon name="exit" size={20} /></span>
-					<div>
-						<p>Jam pulang</p>
-						<strong
-							>{formatTime(today?.checkOut?.timestamp?.toDate())}<small
-								>{today?.checkOut ? 'WIB' : ''}</small
-							></strong
-						><span
-							>{loading
-								? 'Memuat data…'
-								: loadError
-									? 'Data belum tersedia'
-									: today?.checkOut
-										? 'Sampai jumpa esok hari'
-										: 'Belum ada presensi pulang'}</span
-						>
+					<div class="card stat-card">
+						<span class="stat-icon orange"><Icon name="exit" size={20} /></span>
+						<div>
+							<p>Jam pulang</p>
+							<strong
+								>{formatTime(today?.checkOut?.timestamp?.toDate())}<small
+									>{today?.checkOut ? 'WIB' : ''}</small
+								></strong
+							><span
+								>{loading
+									? 'Memuat data…'
+									: loadError
+										? 'Data belum tersedia'
+										: today?.checkOut
+											? 'Sampai jumpa esok hari'
+											: 'Belum ada presensi pulang'}</span
+							>
+						</div>
 					</div>
-				</div>
-				<div class="card stat-card">
-					<span class="stat-icon blue"><Icon name="calendar" size={20} /></span>
-					<div>
-						<p>Kehadiran bulan ini</p>
-						<strong>{loading || loadError ? '—' : monthDays.length}<small>hari</small></strong><span
-							>{formatDate(now, { weekday: undefined, day: undefined, month: 'long' })}</span
-						>
+					<div class="card stat-card">
+						<span class="stat-icon blue"><Icon name="calendar" size={20} /></span>
+						<div>
+							<p>Kehadiran bulan ini</p>
+							<strong>{loading || loadError ? '—' : monthDays.length}<small>hari</small></strong
+							><span>{formatDate(now, { weekday: undefined, day: undefined, month: 'long' })}</span>
+						</div>
 					</div>
-				</div>
+				{/if}
 			</section>
 			<div class="dashboard-grid">
 				<div class="primary-column">
-					{#if loading}<section class="card loading-card" role="status">
-							<span class="spinner"></span>
-							<p>Menyiapkan ruang presensimu…</p>
+					{#if loading}<section class="card">
+							<LoadingSkeleton label="Menyiapkan ruang presensimu…" />
 						</section>{:else if loadError}<section class="card loading-card" role="alert">
 							<Icon name="info" size={28} />
 							<h2>
@@ -298,6 +309,23 @@
 </div>
 
 <style>
+	.placeholder-icon {
+		width: 40px;
+		height: 40px;
+	}
+	.stat-placeholder {
+		display: grid;
+		align-content: center;
+		flex: 1;
+		gap: 8px;
+	}
+	.stat-placeholder span {
+		height: 12px;
+	}
+	.stat-placeholder span:last-child {
+		width: 54%;
+		height: 19px;
+	}
 	.app-shell {
 		display: flex;
 		min-height: 100svh;
