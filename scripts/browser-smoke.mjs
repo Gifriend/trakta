@@ -32,10 +32,20 @@ try {
 	await setEmulatorRules(
 		"rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if false; } } }"
 	);
-	await page.goto(baseURL);
+	const documentResponse = await page.goto(baseURL);
+	assert.match(await documentResponse.text(), /aria-busy="true"/);
 	await page.getByRole('heading', { name: 'Selamat datang kembali.' }).waitFor();
 	assert.equal(await page.title(), 'Trakta');
 	assert.equal(await page.locator('.brand').first().innerText(), 'Trakta');
+	await page.getByLabel('Tema', { exact: true }).selectOption('neo');
+	await page.getByLabel('Bahasa', { exact: true }).selectOption('en');
+	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
+	await page.reload();
+	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
+	assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+	assert.equal(await page.locator('html').getAttribute('data-theme'), 'neo');
+	await page.getByLabel('Language', { exact: true }).selectOption('id');
+	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
 	await page.screenshot({ path: 'test-results/login-desktop.png', fullPage: true });
 	await page.setViewportSize({ width: 375, height: 812 });
 	assert.equal(
@@ -54,11 +64,77 @@ try {
 	await page.getByRole('alert').filter({ hasText: 'Hubungi pengelola aplikasi' }).waitFor();
 	assert.equal(await page.getByRole('heading', { name: 'Jejak kehadiranmu' }).count(), 0);
 	await page.screenshot({ path: 'test-results/firestore-denied.png', fullPage: true });
+	// Give the capture test an asymmetric frame whose orientation is easy to verify.
+	await page.evaluate(() => {
+		window.__realCamera = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+		navigator.mediaDevices.getUserMedia = async () => {
+			const canvas = document.createElement('canvas');
+			canvas.width = 320;
+			canvas.height = 240;
+			const context = canvas.getContext('2d');
+			const stream = canvas.captureStream(12);
+			const [track] = stream.getVideoTracks();
+			function render() {
+				if (track.readyState === 'ended') return;
+				context.fillStyle = '#e6c800';
+				context.fillRect(0, 0, 160, 240);
+				context.fillStyle = '#002db4';
+				context.fillRect(160, 0, 160, 240);
+				requestAnimationFrame(render);
+			}
+			render();
+			return stream;
+		};
+	});
 	await setEmulatorRules(appRules);
 	await page.getByRole('button', { name: 'Muat ulang data' }).click();
 	await page.getByRole('heading', { name: 'Catat presensi masuk' }).waitFor();
+	await page.getByLabel('Tema', { exact: true }).selectOption('neo');
+	await page.getByLabel('Bahasa', { exact: true }).selectOption('en');
+	await page.getByRole('heading', { name: 'Check in', exact: true }).waitFor();
+	await page.getByLabel('Camera effect', { exact: true }).selectOption('mono');
+	assert.equal(
+		await page.locator('video').evaluate((video) => getComputedStyle(video).transform),
+		'none'
+	);
+	assert.equal(
+		await page.locator('video').evaluate((video) => getComputedStyle(video).filter),
+		'grayscale(1)'
+	);
+	await page.screenshot({ path: 'test-results/trakta-neo-en.png', fullPage: true });
+	await page.setViewportSize({ width: 375, height: 812 });
+	assert.equal(
+		await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+		true
+	);
+	await page.screenshot({ path: 'test-results/trakta-neo-en-mobile.png', fullPage: true });
+	await page.setViewportSize({ width: 1440, height: 1100 });
+	await page.getByLabel('Language', { exact: true }).selectOption('id');
+	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
 	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
-	await page.getByAltText('Pratinjau foto presensi yang akan dikirim').waitFor();
+	const captured = page.getByAltText('Pratinjau foto presensi yang akan dikirim');
+	await captured.waitFor();
+	const [left, right] = await captured.evaluate(async (image) => {
+		await image.decode();
+		const canvas = document.createElement('canvas');
+		canvas.width = image.naturalWidth;
+		canvas.height = image.naturalHeight;
+		const context = canvas.getContext('2d');
+		context.drawImage(image, 0, 0);
+		return [0.25, 0.75].map((side) =>
+			Array.from(context.getImageData(canvas.width * side, canvas.height / 2, 1, 1).data)
+		);
+	});
+	assert.ok(left[0] > right[0] + 80, 'the bright side stays on the left in the saved photo');
+	for (const [red, green, blue] of [left, right]) {
+		assert.ok(
+			Math.abs(red - green) <= 3 && Math.abs(green - blue) <= 3,
+			'saved photo is monochrome'
+		);
+	}
+	await page.evaluate(() => {
+		navigator.mediaDevices.getUserMedia = window.__realCamera;
+	});
 	assert.equal(
 		await page.getByLabel('Pilih atau ambil foto presensi').getAttribute('capture'),
 		null
@@ -191,7 +267,7 @@ try {
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
 	assert.deepEqual(failures, [], 'No browser runtime errors');
 	console.log(
-		'PASS: automatic camera, capture and stream cleanup, gallery picker, camera permission fallback, Trakta branding, rules recovery, login, compression, check-in/out, photo history, offline blocking, responsive layouts.'
+		'PASS: skeleton loading, theme and language persistence, unmirrored monochrome capture, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, photo history, offline blocking, and responsive layouts.'
 	);
 } finally {
 	try {
