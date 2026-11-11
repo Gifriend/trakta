@@ -25,6 +25,9 @@ const context = await browser.newContext({
 	permissions: ['camera']
 });
 const page = await context.newPage();
+const combo = (name) => page.getByRole('combobox', { name, exact: true });
+const settings = (name) => page.getByRole('dialog', { name, exact: true });
+const settingsButton = (name) => page.getByRole('button', { name, exact: true });
 const failures = [];
 page.on('pageerror', (error) => failures.push(error.message));
 try {
@@ -37,29 +40,29 @@ try {
 	await page.getByRole('heading', { name: 'Selamat datang kembali.' }).waitFor();
 	assert.equal(await page.title(), 'Trakta');
 	assert.equal(await page.locator('.brand').first().innerText(), 'Trakta');
-	assert.equal(await page.getByLabel('Tampilan', { exact: true }).inputValue(), 'light');
-	await page.getByLabel('Tampilan', { exact: true }).selectOption('dark');
+	assert.equal(await combo('Tampilan').inputValue(), 'light');
+	await combo('Tampilan').selectOption('dark');
 	assert.equal(
 		await page.locator('html').evaluate((root) => getComputedStyle(root).backgroundColor),
 		'rgb(17, 29, 25)'
 	);
-	await page.getByLabel('Tema', { exact: true }).selectOption('neo');
-	await page.getByLabel('Bahasa', { exact: true }).selectOption('en');
+	await combo('Tema').selectOption('neo');
+	await combo('Bahasa').selectOption('en');
 	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
 	await page.reload();
 	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
 	assert.equal(await page.locator('html').getAttribute('lang'), 'en');
 	assert.equal(await page.locator('html').getAttribute('data-theme'), 'neo');
-	assert.equal(await page.getByLabel('Appearance', { exact: true }).inputValue(), 'dark');
+	assert.equal(await combo('Appearance').inputValue(), 'dark');
 	assert.equal(
 		await page.locator('html').evaluate((root) => getComputedStyle(root).backgroundColor),
 		'rgb(24, 28, 49)'
 	);
-	await page.getByLabel('Appearance', { exact: true }).selectOption('light');
+	await combo('Appearance').selectOption('light');
 	assert.equal(await page.locator('html').getAttribute('data-theme'), 'neo');
 	assert.equal(await page.locator('html').getAttribute('data-mode'), 'light');
-	const themePicker = page.getByLabel('Theme', { exact: true });
-	const appearance = page.getByLabel('Appearance', { exact: true });
+	const themePicker = combo('Theme');
+	const appearance = combo('Appearance');
 	for (const [theme, light, dark] of [
 		['glass', 'rgb(229, 236, 255)', 'rgb(16, 22, 45)'],
 		['clay', 'rgb(246, 233, 236)', 'rgb(33, 25, 37)'],
@@ -84,8 +87,8 @@ try {
 	assert.equal(await appearance.inputValue(), 'dark');
 	assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'), '#161513');
 	await appearance.selectOption('light');
-	await page.getByLabel('Language', { exact: true }).selectOption('id');
-	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
+	await combo('Language').selectOption('id');
+	await combo('Tema').selectOption('classic');
 	await page.screenshot({ path: 'test-results/login-desktop.png', fullPage: true });
 	await page.setViewportSize({ width: 375, height: 812 });
 	assert.equal(
@@ -93,6 +96,27 @@ try {
 		true
 	);
 	await page.screenshot({ path: 'test-results/login-mobile.png', fullPage: true });
+	await page.setViewportSize({ width: 320, height: 510 });
+	assert.equal(await combo('Tema').count(), 0);
+	await page.evaluate(() => window.scrollTo(0, 200));
+	assert.ok(await page.evaluate(() => window.scrollY > 0));
+	assert.equal(
+		await page.locator('.auth-toolbar').evaluate((header) => header.getBoundingClientRect().top),
+		0
+	);
+	await settingsButton('Pengaturan').click();
+	await settings('Pengaturan').waitFor();
+	assert.equal(await combo('Efek kamera').count(), 0);
+	await combo('Tema').selectOption('glass');
+	await combo('Bahasa').selectOption('en');
+	await settings('Settings').getByRole('button', { name: 'Close settings' }).click();
+	assert.equal(await page.locator('html').getAttribute('data-theme'), 'glass');
+	await settingsButton('Settings').click();
+	await combo('Theme').selectOption('classic');
+	await combo('Language').selectOption('id');
+	await page.keyboard.press('Escape');
+	await settings('Pengaturan').waitFor({ state: 'hidden' });
+	await page.evaluate(() => window.scrollTo(0, 0));
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	await page.getByRole('button', { name: 'Daftar sekarang' }).click();
 	await page.getByLabel('Nama lengkap').fill('Rani QA');
@@ -131,10 +155,10 @@ try {
 	await setEmulatorRules(appRules);
 	await page.getByRole('button', { name: 'Muat ulang data' }).click();
 	await page.getByRole('heading', { name: 'Catat presensi masuk' }).waitFor();
-	await page.getByLabel('Tema', { exact: true }).selectOption('neo');
-	await page.getByLabel('Bahasa', { exact: true }).selectOption('en');
+	await combo('Tema').selectOption('neo');
+	await combo('Bahasa').selectOption('en');
 	await page.getByRole('heading', { name: 'Check in', exact: true }).waitFor();
-	const cameraEffect = page.getByLabel('Camera effect', { exact: true });
+	const cameraEffect = combo('Camera effect');
 	for (const [label, filter] of [
 		['Sepia', 'sepia(1)'],
 		['Vivid', 'saturate(1.45)'],
@@ -156,7 +180,7 @@ try {
 		await page.locator('video').evaluate((video) => getComputedStyle(video).filter),
 		'grayscale(1)'
 	);
-	await page.getByLabel('Appearance', { exact: true }).selectOption('dark');
+	await appearance.selectOption('dark');
 	await page.screenshot({ path: 'test-results/trakta-neo-dark-en.png', fullPage: true });
 	await page.setViewportSize({ width: 375, height: 812 });
 	assert.equal(
@@ -164,9 +188,44 @@ try {
 		true
 	);
 	await page.screenshot({ path: 'test-results/trakta-neo-dark-en-mobile.png', fullPage: true });
+	assert.equal(await appearance.count(), 0);
+	assert.equal(await cameraEffect.count(), 0);
+	await page.evaluate(() => window.scrollTo(0, 420));
+	assert.ok(await page.evaluate(() => window.scrollY > 0));
+	assert.equal(
+		await page.locator('.topbar').evaluate((header) => header.getBoundingClientRect().top),
+		0
+	);
+	await settingsButton('Settings').click();
+	await cameraEffect.selectOption('soft');
+	await page.screenshot({ path: 'test-results/settings-mobile.png' });
+	await page.keyboard.press('Escape');
+	await settings('Settings').waitFor({ state: 'hidden' });
+	assert.equal(
+		await settingsButton('Settings').evaluate((button) => button.matches(':focus')),
+		true
+	);
+	assert.equal(
+		await page.locator('video').evaluate((video) => getComputedStyle(video).filter),
+		'contrast(0.8)'
+	);
+	await settingsButton('Settings').click();
+	await cameraEffect.selectOption('mono');
 	await appearance.selectOption('light');
+	await settings('Settings').getByRole('link', { name: 'Attendance history' }).click();
+	await settings('Settings').waitFor({ state: 'hidden' });
+	assert.equal(new URL(page.url()).hash, '#riwayat');
+	assert.ok(
+		await page.locator('#riwayat').evaluate((history) => {
+			const header = document.querySelector('.topbar');
+			return history.getBoundingClientRect().top >= header.getBoundingClientRect().bottom;
+		})
+	);
+	await page.evaluate(() => window.scrollTo(0, 0));
 	for (const theme of ['glass', 'clay', 'swiss', 'deco']) {
+		await settingsButton('Settings').click();
 		await themePicker.selectOption(theme);
+		await settings('Settings').getByRole('button', { name: 'Close settings' }).click();
 		assert.equal(
 			await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
 			true,
@@ -178,9 +237,9 @@ try {
 		});
 	}
 	await page.setViewportSize({ width: 1440, height: 1100 });
-	await page.getByLabel('Language', { exact: true }).selectOption('id');
-	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
-	await page.getByLabel('Tampilan', { exact: true }).selectOption('light');
+	await combo('Language').selectOption('id');
+	await combo('Tema').selectOption('classic');
+	await combo('Tampilan').selectOption('light');
 	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
 	const captured = page.getByAltText('Pratinjau foto presensi yang akan dikirim');
 	await captured.waitFor();
@@ -225,7 +284,7 @@ try {
 		await page.locator('video').evaluate((video) => getComputedStyle(video).transform),
 		'matrix(-1, 0, 0, 1, 0, 0)'
 	);
-	await page.getByLabel('Efek kamera', { exact: true }).selectOption('sepia');
+	await combo('Efek kamera').selectOption('sepia');
 	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
 	await page.waitForFunction((previousSrc) => {
 		const photo = document.querySelector('img[alt="Pratinjau foto presensi yang akan dikirim"]');
@@ -364,7 +423,9 @@ try {
 	await page.getByRole('button', { name: 'Tutup foto' }).click();
 	await page.keyboard.press('Tab');
 	await page.screenshot({ path: 'test-results/completed-desktop.png', fullPage: true });
-	await page.getByRole('button', { name: 'Keluar dari akun' }).first().click();
+	await page.setViewportSize({ width: 375, height: 812 });
+	await settingsButton('Pengaturan').click();
+	await settings('Pengaturan').getByRole('button', { name: 'Keluar dari akun' }).click();
 	await page.getByRole('heading', { name: 'Selamat datang kembali.' }).waitFor();
 	await page.getByLabel('Alamat email').fill(email);
 	await page.getByLabel('Kata sandi', { exact: true }).fill('TestPresensi123!');
@@ -372,7 +433,7 @@ try {
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
 	assert.deepEqual(failures, [], 'No browser runtime errors');
 	console.log(
-		'PASS: skeleton loading, theme, display mode and language persistence, camera effects and orientation correction, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, photo history, offline blocking, and responsive layouts.'
+		'PASS: sticky mobile headers, settings sheet and navigation, theme and language persistence, camera effects and orientation correction, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, photo history, offline blocking, and responsive layouts.'
 	);
 } finally {
 	try {
