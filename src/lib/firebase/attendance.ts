@@ -9,7 +9,10 @@ import {
 	query,
 	runTransaction,
 	serverTimestamp,
+	startAfter,
+	where,
 	type FirestoreError,
+	type QueryConstraint,
 	type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { getFirebase } from './client';
@@ -23,12 +26,29 @@ import type {
 import { dateKey } from '#lib/utils/date.ts';
 import { MAX_PHOTO_BYTES } from '#lib/utils/image.ts';
 
-function attendanceQuery(uid: string) {
-	return query(collection(getDatabase(), 'users', uid, 'attendance'), orderBy('dateKey', 'desc'));
+export type AttendanceRange = { from?: string; to?: string };
+
+function attendanceQuery(uid: string, range?: AttendanceRange) {
+	const filters: QueryConstraint[] = [orderBy('dateKey', 'desc')];
+	if (range?.from) filters.push(where('dateKey', '>=', range.from));
+	if (range?.to) filters.push(where('dateKey', '<=', range.to));
+	return query(collection(getDatabase(), 'users', uid, 'attendance'), ...filters);
 }
 
 function attendanceDay(entry: QueryDocumentSnapshot): AttendanceDay {
 	return { ...entry.data(), id: entry.id } as AttendanceDay;
+}
+
+export const ATTENDANCE_PAGE_SIZE = 10;
+
+export async function loadAttendancePage(uid: string, range?: AttendanceRange, before?: string) {
+	const base = attendanceQuery(uid, range);
+	const pageQuery = before ? query(base, startAfter(before)) : base;
+	const snapshot = await getDocsFromServer(query(pageQuery, limit(ATTENDANCE_PAGE_SIZE + 1)));
+	return {
+		days: snapshot.docs.slice(0, ATTENDANCE_PAGE_SIZE).map(attendanceDay),
+		hasNext: snapshot.size > ATTENDANCE_PAGE_SIZE
+	};
 }
 
 export function watchAttendance(
@@ -47,10 +67,13 @@ export function watchAttendance(
 	);
 }
 
-export async function loadAttendanceForExport(uid: string): Promise<AttendanceDay[]> {
+export async function loadAttendanceForExport(
+	uid: string,
+	range?: AttendanceRange
+): Promise<AttendanceDay[]> {
 	const { auth } = getFirebase();
 	if (auth.currentUser?.uid !== uid) throw new Error('Sesi berakhir. Silakan masuk kembali.');
-	const snapshot = await getDocsFromServer(attendanceQuery(uid));
+	const snapshot = await getDocsFromServer(attendanceQuery(uid, range));
 	if (auth.currentUser?.uid !== uid) throw new Error('Sesi berakhir. Silakan masuk kembali.');
 	return snapshot.docs.map(attendanceDay);
 }
@@ -93,10 +116,22 @@ export async function submitAttendance(input: {
 	});
 }
 
-export async function loadPhoto(uid: string, key: string, kind: AttendanceKind): Promise<string> {
+async function loadPhotoBase64(uid: string, key: string, kind: AttendanceKind) {
 	const snapshot = await getDocFromServer(
 		doc(getDatabase(), 'users', uid, 'attendance', key, 'photos', kind)
 	);
-	if (!snapshot.exists()) throw new Error('Foto tidak ditemukan.');
-	return `data:image/jpeg;base64,${snapshot.data().base64}`;
+	return snapshot.exists() ? (snapshot.data().base64 as string) : null;
+}
+
+export async function loadPhoto(uid: string, key: string, kind: AttendanceKind): Promise<string> {
+	const base64 = await loadPhotoBase64(uid, key, kind);
+	if (base64 === null) throw new Error('Foto tidak ditemukan.');
+	return `data:image/jpeg;base64,${base64}`;
+}
+
+export async function loadPhotoBlob(uid: string, key: string, kind: AttendanceKind) {
+	const base64 = await loadPhotoBase64(uid, key, kind);
+	if (base64 === null) return null;
+	const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+	return new Blob([bytes], { type: 'image/jpeg' });
 }

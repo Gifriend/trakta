@@ -3,23 +3,134 @@
 	import type { AttendanceDay, AttendanceKind } from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
 	import { dateFromKey, formatDate, formatTime, durationLabel } from '#lib/utils/date.ts';
-	import { loadAttendanceForExport, loadPhoto } from '#lib/firebase/attendance.ts';
+	import {
+		ATTENDANCE_PAGE_SIZE,
+		loadAttendanceForExport,
+		loadAttendancePage,
+		loadPhoto,
+		type AttendanceRange
+	} from '#lib/firebase/attendance.ts';
 	import { friendlyError } from '#lib/firebase/auth.ts';
 	import Icon from './Icon.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	let { days, uid, loading }: { days: AttendanceDay[]; uid: string; loading: boolean } = $props();
-	let expanded = $state(false);
+	type HistoryPage = Awaited<ReturnType<typeof loadAttendancePage>>;
+	const fieldId = $props.id();
+	let from = $state('');
+	let to = $state('');
+	let appliedFilter = $state.raw<{ range: AttendanceRange; page: HistoryPage }>();
+	let navigation = $state.raw<{ firstCursor: string; pages: HistoryPage[]; index: number }>();
+	let loadingPage = $state(false);
+	let pageError = $state('');
 	let photo = $state('');
 	let selectedPhoto = $state<{ dateKey: string; kind: AttendanceKind }>();
 	let busy = $state(false);
 	let error = $state('');
 	let exporting = $state(false);
 	let exportError = $state('');
+	let withPhotos = $state(false);
 	let photoDialog: HTMLDialogElement;
 	let activeRequest = 0;
-	let shownDays = $derived(expanded ? days : days.slice(0, 5));
+	const firstPage = $derived.by(() => {
+		if (!appliedFilter) {
+			return {
+				days: days.slice(0, ATTENDANCE_PAGE_SIZE),
+				hasNext: days.length > ATTENDANCE_PAGE_SIZE
+			};
+		}
+		const { range, page } = appliedFilter;
+		const latest = days[0];
+		const latestFetched = page.days[0];
+		if (
+			!latest ||
+			(latestFetched && latest.dateKey < latestFetched.dateKey) ||
+			(latestFetched?.dateKey === latest.dateKey && latestFetched.checkOut && !latest.checkOut) ||
+			(range.from && latest.dateKey < range.from) ||
+			(range.to && latest.dateKey > range.to)
+		) {
+			return page;
+		}
+		const records = [latest, ...page.days.filter((day) => day.dateKey !== latest.dateKey)];
+		return {
+			days: records.slice(0, ATTENDANCE_PAGE_SIZE),
+			hasNext: page.hasNext || records.length > ATTENDANCE_PAGE_SIZE
+		};
+	});
+	const firstCursor = $derived(firstPage.days.at(-1)?.dateKey);
+	const browsing = $derived(navigation?.firstCursor === firstCursor ? navigation : undefined);
+	const pageIndex = $derived(browsing?.index ?? 0);
+	const currentPage = $derived(browsing?.pages[pageIndex - 1] ?? firstPage);
+
+	function clearFilter() {
+		from = '';
+		to = '';
+		appliedFilter = undefined;
+		navigation = undefined;
+		pageError = '';
+		exportError = '';
+	}
+
+	async function applyFilter(event: SubmitEvent) {
+		event.preventDefault();
+		if (loadingPage || exporting) return;
+		if (!from && !to) {
+			clearFilter();
+			return;
+		}
+		if (from && to && from > to) {
+			pageError = 'Tanggal mulai harus sebelum atau sama dengan tanggal sampai.';
+			return;
+		}
+		pageError = '';
+		exportError = '';
+		loadingPage = true;
+		const range = {
+			from: from.replaceAll('-', '') || undefined,
+			to: to.replaceAll('-', '') || undefined
+		};
+		try {
+			const page = await loadAttendancePage(uid, range);
+			appliedFilter = { range, page };
+			navigation = undefined;
+		} catch {
+			pageError = 'Filter tanggal gagal dimuat. Periksa koneksi lalu coba lagi.';
+		} finally {
+			loadingPage = false;
+		}
+	}
+
+	function previousPage() {
+		if (!browsing || pageIndex === 0 || loadingPage) return;
+		pageError = '';
+		navigation = { ...browsing, index: pageIndex - 1 };
+	}
+
+	async function nextPage() {
+		const boundary = firstCursor;
+		const after = currentPage.days.at(-1)?.dateKey;
+		if (!boundary || !after || !currentPage.hasNext || loadingPage) return;
+		pageError = '';
+		const pages = browsing?.pages ?? [];
+		const index = pageIndex + 1;
+		if (pages[index - 1]) {
+			navigation = { firstCursor: boundary, pages, index };
+			return;
+		}
+		loadingPage = true;
+		try {
+			const page = await loadAttendancePage(uid, appliedFilter?.range, after);
+			if (firstCursor !== boundary) return;
+			if (page.days.length) navigation = { firstCursor: boundary, pages: [...pages, page], index };
+			else pageError = 'Tidak ada halaman berikutnya.';
+		} catch {
+			pageError = 'Halaman berikutnya gagal dimuat. Periksa koneksi lalu coba lagi.';
+		} finally {
+			loadingPage = false;
+		}
+	}
+
 	async function exportExcel() {
-		if (exporting || !days.length) return;
+		if (exporting || loadingPage || !currentPage.days.length) return;
 		exportError = '';
 		if (!navigator.onLine) {
 			exportError = 'Hubungkan internet untuk mengunduh seluruh riwayat presensi.';
@@ -27,13 +138,15 @@
 		}
 		exporting = true;
 		const { locale } = preferences;
+		const includePhotos = withPhotos;
 		try {
 			const [{ downloadAttendanceWorkbook }, records] = await Promise.all([
 				import('#lib/utils/attendance-excel.ts'),
-				loadAttendanceForExport(uid)
+				loadAttendanceForExport(uid, appliedFilter?.range)
 			]);
-			if (records.length) await downloadAttendanceWorkbook(records, locale);
-			else exportError = 'Belum ada data presensi untuk diekspor.';
+			if (records.length) {
+				await downloadAttendanceWorkbook(records, locale, includePhotos ? uid : undefined);
+			} else exportError = 'Belum ada data presensi untuk diekspor.';
 		} catch {
 			exportError = 'Ekspor Excel gagal. Periksa koneksi lalu coba lagi.';
 		} finally {
@@ -63,6 +176,18 @@
 	}
 	const preferences = getPreferences();
 	const { t } = preferences;
+	const rangeLabel = $derived.by(() => {
+		if (!appliedFilter) return '';
+		const { from, to } = appliedFilter.range;
+		const label = (key: string) =>
+			formatDate(dateFromKey(key), { weekday: undefined, month: 'short' }, preferences.locale);
+		if (from && to) return t('Periode {from} – {to}', { from: label(from), to: label(to) });
+		return from
+			? t('Sejak {date}', { date: label(from) })
+			: to
+				? t('Sampai {date}', { date: label(to) })
+				: '';
+	});
 	const photoLabel = $derived(
 		selectedPhoto
 			? `${t(selectedPhoto.kind === 'checkIn' ? 'Foto masuk' : 'Foto pulang')} · ${formatDate(dateFromKey(selectedPhoto.dateKey), {}, preferences.locale)}`
@@ -75,21 +200,19 @@
 		<div>
 			<h2 id="history-title">{t('Jejak kehadiranmu')}</h2>
 			<p class="muted">
-				{t(expanded ? 'Riwayat 31 presensi terakhir.' : 'Riwayat presensi terbaru.')}
+				{rangeLabel || t('Riwayat presensi terbaru.')}
 			</p>
 		</div>
-		{#if !loading && days.length}
+		{#if !loading && currentPage.days.length}
 			<div class="history-actions">
-				{#if days.length > 5}
-					<button type="button" class="text-button" onclick={() => (expanded = !expanded)}>
-						{expanded ? t('Ringkas') : t('Lihat semua')}
-						<Icon name="arrow" size={15} />
-					</button>
-				{/if}
+				<label class="include-photos">
+					<input type="checkbox" bind:checked={withPhotos} disabled={exporting || loadingPage} />
+					{t('Sertakan foto')}
+				</label>
 				<button
 					type="button"
 					class="button secondary"
-					disabled={exporting}
+					disabled={exporting || loadingPage}
 					aria-busy={exporting}
 					onclick={exportExcel}
 				>
@@ -99,18 +222,83 @@
 			</div>
 		{/if}
 	</div>
+	{#if !loading && days.length}
+		<form class="date-filter" onsubmit={applyFilter} aria-label={t('Filter tanggal')}>
+			<div>
+				<label for={`${fieldId}-from`}>{t('Tanggal mulai')}</label>
+				<input
+					id={`${fieldId}-from`}
+					type="date"
+					max="9999-12-31"
+					bind:value={from}
+					disabled={loadingPage || exporting}
+				/>
+			</div>
+			<div>
+				<label for={`${fieldId}-to`}>{t('Tanggal sampai')}</label>
+				<input
+					id={`${fieldId}-to`}
+					type="date"
+					max="9999-12-31"
+					bind:value={to}
+					disabled={loadingPage || exporting}
+				/>
+			</div>
+			<div class="filter-actions">
+				<button type="submit" class="button secondary" disabled={loadingPage || exporting}>
+					{t('Filter tanggal')}
+				</button>
+				{#if appliedFilter || from || to}
+					<button
+						type="button"
+						class="text-button"
+						disabled={loadingPage || exporting}
+						onclick={clearFilter}
+					>
+						{t('Hapus filter')}
+					</button>
+				{/if}
+			</div>
+		</form>
+	{/if}
 	{#if exportError}<p class="notice error export-error" role="alert">{t(exportError)}</p>{/if}
+	{#if pageError}<p class="notice error export-error" role="alert">{t(pageError)}</p>{/if}
+	{#if !loading && (loadingPage || pageIndex > 0 || currentPage.hasNext)}
+		<nav class="pagination" aria-label={t('Halaman riwayat')}>
+			<button
+				type="button"
+				class="button secondary"
+				disabled={pageIndex === 0 || loadingPage}
+				onclick={previousPage}>{t('Sebelumnya')}</button
+			>
+			<span role="status"
+				>{loadingPage
+					? t('Memuat halaman…')
+					: t('Halaman {page}', { page: String(pageIndex + 1) })}</span
+			>
+			<button
+				type="button"
+				class="button secondary"
+				disabled={!currentPage.hasNext || loadingPage}
+				onclick={nextPage}>{t('Selanjutnya')}</button
+			>
+		</nav>
+	{/if}
 	{#if loading}<LoadingSkeleton
 			variant="history"
 			label={t('Mengambil riwayat presensi…')}
-		/>{:else if !days.length}<div class="empty-history">
+		/>{:else if !currentPage.days.length}<div class="empty-history">
 			<div class="empty-icon"><Icon name="calendar" size={26} /></div>
-			<strong>{t('Setiap perjalanan punya awal.')}</strong>
-			<p>
-				{t('Presensi pertamamu akan muncul di sini.')}<br />{t(
-					'Mulai dengan mencatat kehadiran hari ini.'
-				)}
-			</p>
+			{#if appliedFilter}
+				<strong>{t('Tidak ada presensi dalam rentang ini.')}</strong>
+			{:else}
+				<strong>{t('Setiap perjalanan punya awal.')}</strong>
+				<p>
+					{t('Presensi pertamamu akan muncul di sini.')}<br />{t(
+						'Mulai dengan mencatat kehadiran hari ini.'
+					)}
+				</p>
+			{/if}
 		</div>{:else}<div class="table-scroll">
 			<table>
 				<thead
@@ -119,7 +307,7 @@
 						><th>{t('Status')}</th><th>{t('Foto')}</th></tr
 					></thead
 				><tbody
-					>{#each shownDays as day (day.id)}<tr
+					>{#each currentPage.days as day (day.id)}<tr
 							><td
 								><strong
 									>{formatDate(
@@ -216,6 +404,60 @@
 	.export-error {
 		margin: 0 27px 16px;
 	}
+	.include-photos {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-height: 44px;
+		margin: 0;
+	}
+	.include-photos input {
+		width: 16px;
+		height: 16px;
+		padding: 0;
+		accent-color: var(--primary);
+	}
+	.date-filter {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+		padding: 0 16px 16px;
+	}
+	.date-filter input {
+		min-width: 0;
+		min-height: 46px;
+		padding: 8px;
+	}
+	.filter-actions {
+		grid-column: 1 / -1;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 14px;
+	}
+	@media (min-width: 701px) {
+		.date-filter {
+			grid-template-columns: repeat(2, minmax(0, 11rem)) auto;
+			align-items: end;
+			padding-inline: 27px;
+		}
+		.filter-actions {
+			grid-column: auto;
+		}
+	}
+	.pagination {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--border);
+	}
+	.pagination span {
+		color: var(--muted);
+		font-size: 12px;
+	}
 	h2 {
 		font-size: 18px;
 		letter-spacing: -0.4px;
@@ -223,13 +465,6 @@
 	.history-heading p {
 		font-size: 11px;
 		margin: 7px 0 0;
-	}
-	.text-button {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 11px;
-		white-space: nowrap;
 	}
 	.empty-history {
 		min-height: 200px;
