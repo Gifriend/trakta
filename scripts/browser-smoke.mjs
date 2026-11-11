@@ -418,6 +418,15 @@ try {
 		await page.getByRole('button', { name: `Konfirmasi ${kind}` }).click();
 	}
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
+	const [workbookDownload] = await Promise.all([
+		page.waitForEvent('download'),
+		page.getByRole('button', { name: 'Ekspor Excel', exact: true }).click()
+	]);
+	assert.match(workbookDownload.suggestedFilename(), /^trakta-presensi-\d{8}\.xlsx$/);
+	const workbookPath = 'test-results/presensi-export.xlsx';
+	await workbookDownload.saveAs(workbookPath);
+	const workbook = await readFile(workbookPath);
+	assert.equal(workbook.subarray(0, 4).toString('hex'), '504b0304');
 	await page.getByRole('button', { name: /Lihat foto masuk/ }).click();
 	await page.getByRole('dialog').getByRole('img').waitFor();
 	await page.getByRole('button', { name: 'Tutup foto' }).click();
@@ -433,7 +442,7 @@ try {
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
 	assert.deepEqual(failures, [], 'No browser runtime errors');
 	console.log(
-		'PASS: sticky mobile headers, settings sheet and navigation, theme and language persistence, camera effects and orientation correction, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, photo history, offline blocking, and responsive layouts.'
+		'PASS: sticky mobile headers, settings sheet and navigation, theme and language persistence, camera effects and orientation correction, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, Excel export, photo history, offline blocking, and responsive layouts.'
 	);
 } finally {
 	try {
