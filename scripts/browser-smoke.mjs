@@ -1,6 +1,8 @@
 import { chromium } from 'playwright';
 import { mkdir, readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
+import { doc, writeBatch } from 'firebase/firestore';
 
 const baseURL = process.env.TEST_URL || 'http://127.0.0.1:5173';
 const appRules = await readFile('firestore.rules', 'utf8');
@@ -123,7 +125,13 @@ try {
 	const email = `qa-${Date.now()}@example.test`;
 	await page.getByLabel('Alamat email').fill(email);
 	await page.getByLabel('Kata sandi', { exact: true }).fill('TestPresensi123!');
-	await page.getByRole('button', { name: 'Buat akun' }).click();
+	const [signUp] = await Promise.all([
+		page.waitForResponse(
+			(response) => response.ok() && response.url().includes('/accounts:signUp')
+		),
+		page.getByRole('button', { name: 'Buat akun' }).click()
+	]);
+	const { localId: uid } = await signUp.json();
 	await page.getByRole('heading', { name: 'Akses presensi belum diizinkan' }).waitFor();
 	await page.getByRole('alert').filter({ hasText: 'Hubungi pengelola aplikasi' }).waitFor();
 	assert.equal(await page.getByRole('heading', { name: 'Jejak kehadiranmu' }).count(), 0);
@@ -418,6 +426,57 @@ try {
 		await page.getByRole('button', { name: `Konfirmasi ${kind}` }).click();
 	}
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
+	const emulator = await initializeTestEnvironment({
+		projectId: 'demo-presensi',
+		firestore: { host: '127.0.0.1', port: 8085 }
+	});
+	try {
+		await emulator.withSecurityRulesDisabled(async (admin) => {
+			const db = admin.firestore();
+			const batch = writeBatch(db);
+			for (let day = 1; day <= 31; day++) {
+				const dayNumber = String(day).padStart(2, '0');
+				const dateKey = `202001${dayNumber}`;
+				batch.set(doc(db, 'users', uid, 'attendance', dateKey), {
+					dateKey,
+					checkIn: {
+						timestamp: new Date(`2020-01-${dayNumber}T02:00:00Z`),
+						mode: 'office',
+						note: `Catatan lama ${dateKey}`
+					}
+				});
+			}
+			await batch.commit();
+		});
+	} finally {
+		await emulator.cleanup();
+	}
+	const history = page.locator('#riwayat');
+	const next = history.getByRole('button', { name: 'Selanjutnya' });
+	const previous = history.getByRole('button', { name: 'Sebelumnya' });
+	await history.getByText('Halaman 1', { exact: true }).waitFor();
+	assert.equal(await previous.isDisabled(), true);
+	for (const index of [2, 3, 4]) {
+		await next.click();
+		await history.getByText(`Halaman ${index}`, { exact: true }).waitFor();
+	}
+	await history.getByText('Catatan lama 20200101').waitFor();
+	assert.equal(await next.isDisabled(), true);
+	await previous.click();
+	await history.getByText('Halaman 3', { exact: true }).waitFor();
+	await history.getByLabel('Tanggal mulai').fill('2020-01-02');
+	await history.getByLabel('Tanggal sampai').fill('2020-01-13');
+	await history.getByRole('button', { name: 'Filter tanggal', exact: true }).click();
+	await history.getByText('Halaman 1', { exact: true }).waitFor();
+	await history.getByText('Catatan lama 20200113').waitFor();
+	assert.equal(await history.getByText('Catatan lama 20200114').count(), 0);
+	await next.click();
+	await history.getByText('Halaman 2', { exact: true }).waitFor();
+	await history.getByText('Catatan lama 20200102').waitFor();
+	assert.equal(await history.getByText('Catatan lama 20200101').count(), 0);
+	assert.equal(await next.isDisabled(), true);
+	await history.getByRole('button', { name: 'Hapus filter' }).click();
+	await history.getByText('Halaman 1', { exact: true }).waitFor();
 	const [workbookDownload] = await Promise.all([
 		page.waitForEvent('download'),
 		page.getByRole('button', { name: 'Ekspor Excel', exact: true }).click()
@@ -427,6 +486,28 @@ try {
 	await workbookDownload.saveAs(workbookPath);
 	const workbook = await readFile(workbookPath);
 	assert.equal(workbook.subarray(0, 4).toString('hex'), '504b0304');
+	assert.equal(workbook.includes(Buffer.from('xl/media/')), false);
+	const today = await history
+		.getByRole('button', { name: /Lihat foto masuk/ })
+		.first()
+		.getAttribute('aria-label');
+	const dayKey = today.match(/\d{8}$/)[0];
+	const todayFilter = `${dayKey.slice(0, 4)}-${dayKey.slice(4, 6)}-${dayKey.slice(6, 8)}`;
+	await history.getByLabel('Tanggal mulai').fill(todayFilter);
+	await history.getByLabel('Tanggal sampai').fill(todayFilter);
+	await history.getByRole('button', { name: 'Filter tanggal', exact: true }).click();
+	await history.getByText(/^Periode /).waitFor();
+	await history.getByRole('checkbox', { name: 'Sertakan foto' }).check();
+	const [photoWorkbook] = await Promise.all([
+		page.waitForEvent('download'),
+		history.getByRole('button', { name: 'Ekspor Excel', exact: true }).click()
+	]);
+	assert.match(photoWorkbook.suggestedFilename(), /^trakta-presensi-\d{8}-foto\.xlsx$/);
+	const photoWorkbookPath = 'test-results/presensi-export-foto.xlsx';
+	await photoWorkbook.saveAs(photoWorkbookPath);
+	const photoFile = await readFile(photoWorkbookPath);
+	assert.ok(photoFile.includes(Buffer.from('xl/media/')));
+	assert.ok(photoFile.includes(Buffer.from('xl/drawings/drawing')));
 	await page.getByRole('button', { name: /Lihat foto masuk/ }).click();
 	await page.getByRole('dialog').getByRole('img').waitFor();
 	await page.getByRole('button', { name: 'Tutup foto' }).click();
@@ -442,7 +523,7 @@ try {
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
 	assert.deepEqual(failures, [], 'No browser runtime errors');
 	console.log(
-		'PASS: sticky mobile headers, settings sheet and navigation, theme and language persistence, camera effects and orientation correction, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, Excel export, photo history, offline blocking, and responsive layouts.'
+		'PASS: check-in/out, cursor pagination beyond 31 days, date filters, Excel exports with and without photos, photo history, and existing mobile workflows.'
 	);
 } finally {
 	try {
