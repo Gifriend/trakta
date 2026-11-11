@@ -37,6 +37,12 @@ try {
 	await page.getByRole('heading', { name: 'Selamat datang kembali.' }).waitFor();
 	assert.equal(await page.title(), 'Trakta');
 	assert.equal(await page.locator('.brand').first().innerText(), 'Trakta');
+	assert.equal(await page.getByLabel('Tampilan', { exact: true }).inputValue(), 'light');
+	await page.getByLabel('Tampilan', { exact: true }).selectOption('dark');
+	assert.equal(
+		await page.locator('html').evaluate((root) => getComputedStyle(root).backgroundColor),
+		'rgb(17, 29, 25)'
+	);
 	await page.getByLabel('Tema', { exact: true }).selectOption('neo');
 	await page.getByLabel('Bahasa', { exact: true }).selectOption('en');
 	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
@@ -44,6 +50,14 @@ try {
 	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
 	assert.equal(await page.locator('html').getAttribute('lang'), 'en');
 	assert.equal(await page.locator('html').getAttribute('data-theme'), 'neo');
+	assert.equal(await page.getByLabel('Appearance', { exact: true }).inputValue(), 'dark');
+	assert.equal(
+		await page.locator('html').evaluate((root) => getComputedStyle(root).backgroundColor),
+		'rgb(26, 20, 34)'
+	);
+	await page.getByLabel('Appearance', { exact: true }).selectOption('light');
+	assert.equal(await page.locator('html').getAttribute('data-theme'), 'neo');
+	assert.equal(await page.locator('html').getAttribute('data-mode'), 'light');
 	await page.getByLabel('Language', { exact: true }).selectOption('id');
 	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
 	await page.screenshot({ path: 'test-results/login-desktop.png', fullPage: true });
@@ -74,12 +88,14 @@ try {
 			const context = canvas.getContext('2d');
 			const stream = canvas.captureStream(12);
 			const [track] = stream.getVideoTracks();
+			const getSettings = track.getSettings.bind(track);
+			track.getSettings = () => ({ ...getSettings(), deviceId: 'orientation-test-camera' });
 			function render() {
 				if (track.readyState === 'ended') return;
 				context.fillStyle = '#e6c800';
-				context.fillRect(0, 0, 160, 240);
+				context.fillRect(window.__mirroredCamera ? 160 : 0, 0, 160, 240);
 				context.fillStyle = '#002db4';
-				context.fillRect(160, 0, 160, 240);
+				context.fillRect(window.__mirroredCamera ? 0 : 160, 0, 160, 240);
 				requestAnimationFrame(render);
 			}
 			render();
@@ -101,30 +117,35 @@ try {
 		await page.locator('video').evaluate((video) => getComputedStyle(video).filter),
 		'grayscale(1)'
 	);
-	await page.screenshot({ path: 'test-results/trakta-neo-en.png', fullPage: true });
+	await page.getByLabel('Appearance', { exact: true }).selectOption('dark');
+	await page.screenshot({ path: 'test-results/trakta-neo-dark-en.png', fullPage: true });
 	await page.setViewportSize({ width: 375, height: 812 });
 	assert.equal(
 		await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
 		true
 	);
-	await page.screenshot({ path: 'test-results/trakta-neo-en-mobile.png', fullPage: true });
+	await page.screenshot({ path: 'test-results/trakta-neo-dark-en-mobile.png', fullPage: true });
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	await page.getByLabel('Language', { exact: true }).selectOption('id');
 	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
+	await page.getByLabel('Tampilan', { exact: true }).selectOption('light');
 	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
 	const captured = page.getByAltText('Pratinjau foto presensi yang akan dikirim');
 	await captured.waitFor();
-	const [left, right] = await captured.evaluate(async (image) => {
-		await image.decode();
-		const canvas = document.createElement('canvas');
-		canvas.width = image.naturalWidth;
-		canvas.height = image.naturalHeight;
-		const context = canvas.getContext('2d');
-		context.drawImage(image, 0, 0);
-		return [0.25, 0.75].map((side) =>
-			Array.from(context.getImageData(canvas.width * side, canvas.height / 2, 1, 1).data)
-		);
-	});
+	const originalPhoto = await captured.getAttribute('src');
+	const samplePhoto = () =>
+		captured.evaluate(async (image) => {
+			await image.decode();
+			const canvas = document.createElement('canvas');
+			canvas.width = image.naturalWidth;
+			canvas.height = image.naturalHeight;
+			const context = canvas.getContext('2d');
+			context.drawImage(image, 0, 0);
+			return [0.25, 0.75].map((side) =>
+				Array.from(context.getImageData(canvas.width * side, canvas.height / 2, 1, 1).data)
+			);
+		});
+	const [left, right] = await samplePhoto();
 	assert.ok(left[0] > right[0] + 80, 'the bright side stays on the left in the saved photo');
 	for (const [red, green, blue] of [left, right]) {
 		assert.ok(
@@ -132,6 +153,38 @@ try {
 			'saved photo is monochrome'
 		);
 	}
+	await page.evaluate(() => {
+		window.__mirroredCamera = true;
+	});
+	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+	const correction = page.getByRole('checkbox', { name: 'Koreksi kiri-kanan' });
+	await correction.check();
+	assert.equal(
+		await page.evaluate(() =>
+			localStorage.getItem('trakta.cameraCorrection.orientation-test-camera')
+		),
+		'true'
+	);
+	await page.getByRole('button', { name: 'Tutup kamera' }).click();
+	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+	await correction.waitFor();
+	assert.equal(await correction.isChecked(), true);
+	assert.equal(
+		await page.locator('video').evaluate((video) => getComputedStyle(video).transform),
+		'matrix(-1, 0, 0, 1, 0, 0)'
+	);
+	await page.getByLabel('Efek kamera', { exact: true }).selectOption('natural');
+	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
+	await page.waitForFunction((previousSrc) => {
+		const photo = document.querySelector('img[alt="Pratinjau foto presensi yang akan dikirim"]');
+		return photo && photo.getAttribute('src') !== previousSrc;
+	}, originalPhoto);
+	const [correctedLeft, correctedRight] = await samplePhoto();
+	assert.ok(
+		correctedLeft[0] > correctedRight[0] + 80,
+		'the camera correction restores the bright side to the left in the saved photo'
+	);
+	assert.ok(correctedRight[2] > correctedRight[0] + 80, 'the new photo uses the natural effect');
 	await page.evaluate(() => {
 		navigator.mediaDevices.getUserMedia = window.__realCamera;
 	});
@@ -267,7 +320,7 @@ try {
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
 	assert.deepEqual(failures, [], 'No browser runtime errors');
 	console.log(
-		'PASS: skeleton loading, theme and language persistence, unmirrored monochrome capture, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, photo history, offline blocking, and responsive layouts.'
+		'PASS: skeleton loading, theme, display mode and language persistence, camera effects and orientation correction, camera cleanup, gallery fallback, Firestore rules recovery, check-in/out, photo history, offline blocking, and responsive layouts.'
 	);
 } finally {
 	try {
