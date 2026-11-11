@@ -1,0 +1,248 @@
+export type Locale = 'id' | 'en';
+
+const english: Record<string, string> = {
+	Tema: 'Theme',
+	Bahasa: 'Language',
+	'Langsung ke konten': 'Skip to content',
+	'Catat presensi masuk dan pulang, lengkapi dengan foto, dan simpan jejak kehadiran harianmu dengan Trakta.':
+		'Check in and out with a photo and track your daily attendance with Trakta.',
+	'Menyiapkan harimu…': 'Getting things ready…',
+	'Belum dapat terhubung': 'Unable to connect',
+	'Coba lagi': 'Try again',
+	'Membuka ruang kerjamu…': 'Opening your workspace…',
+	'Ruang kerja gagal dimuat. Periksa koneksi internet.':
+		'Unable to load your workspace. Check your internet connection.',
+	'Tentang Trakta': 'About Trakta',
+	'SETIAP HARI, LEBIH BERARTI': 'MAKE EVERY DAY COUNT',
+	'Awali hari.': 'Start your day.',
+	'Catat kontribusi.': 'Track your work.',
+	'Presensi yang sederhana, supaya kamu bisa fokus pada hal yang lebih penting.':
+		'Simple attendance tracking so you can focus on your work.',
+	'Satu langkah, sudah tercatat.': 'Your attendance is recorded.',
+	'Ruang presensi pribadi untuk aktivitas harianmu.':
+		'Your personal workspace for daily attendance.',
+	'RUANG KERJAMU, LEBIH TERATUR': 'YOUR ATTENDANCE WORKSPACE',
+	'Mari mulai hari baik.': 'Create your account.',
+	'Lupa kata sandi?': 'Forgot your password?',
+	'Selamat datang kembali.': 'Welcome back.',
+	'Buat akun untuk mencatat presensi pertamamu.':
+		'Create an account to record your first check-in.',
+	'Kami bantu kamu mengakses akun kembali.': 'Get back into your account.',
+	'Masuk untuk mencatat kehadiranmu hari ini.': 'Sign in to record your attendance today.',
+	'Satu langkah sebelum mulai': 'Setup required',
+	'Isi konfigurasi Firebase di {env} sesuai panduan {readme}, lalu jalankan ulang aplikasi.':
+		'Configure Firebase in {env} using {readme}, then restart the app.',
+	'Nama lengkap': 'Full name',
+	'Nama yang ingin ditampilkan': 'Your display name',
+	'Alamat email': 'Email address',
+	'nama@perusahaan.com': 'name@company.com',
+	'Kata sandi': 'Password',
+	'Minimal 8 karakter': 'At least 8 characters',
+	'Masukkan kata sandi': 'Enter your password',
+	'Sembunyikan kata sandi': 'Hide password',
+	'Tampilkan kata sandi': 'Show password',
+	'Mohon tunggu…': 'Please wait…',
+	'Buat akun': 'Create account',
+	'Kirim tautan pemulihan': 'Send reset link',
+	'Masuk ke ruang kerja': 'Sign in',
+	'Belum punya akun?': 'New to Trakta?',
+	'Sudah punya akun?': 'Already have an account?',
+	'Daftar sekarang': 'Create an account',
+	'Masuk di sini': 'Sign in here',
+	'Terhubung dengan Firebase Authentication': 'Connected to Firebase Authentication',
+	'Awali hari dengan tujuan. Pulang dengan pencapaian.':
+		'Track your workday from check-in to check-out.',
+	'Nama minimal 2 karakter.': 'Enter at least 2 characters for your name.',
+	'Jika email terdaftar, tautan pemulihan akan dikirim. Periksa kotak masuk dan spam.':
+		'If the email is registered, a reset link will be sent. Check your inbox and spam folder.',
+	'Email atau kata sandi salah. Periksa lalu coba lagi.':
+		'Incorrect email or password. Check your details and try again.',
+	'Email sudah terdaftar. Silakan masuk.': 'This email is already registered. Please sign in.',
+	'Kata sandi terlalu lemah. Gunakan minimal 8 karakter.':
+		'Your password is too weak. Use at least 8 characters.',
+	'Kata sandi belum memenuhi kebijakan proyek Firebase.':
+		'Your password does not meet the password requirements.',
+	'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.':
+		'Too many attempts. Wait a moment and try again.',
+	'Koneksi terputus. Periksa internet lalu coba lagi.':
+		'Connection lost. Check your internet connection and try again.',
+	'Login email belum diaktifkan di Firebase Authentication.':
+		'Email sign-in is unavailable. Contact the app administrator.',
+	'Akses presensi ditolak. Periksa izin akun, tanggal perangkat, atau pengaturan akses aplikasi.':
+		'Attendance access was denied. Check your account permissions or device date.',
+	'Server belum dapat dihubungi. Periksa koneksi internet lalu coba lagi.':
+		'The server is unavailable. Check your connection and try again.',
+	'Terjadi kesalahan. Silakan coba lagi.': 'Something went wrong. Please try again.',
+	'Firebase hanya tersedia di browser.': 'Firebase is only available in the browser.',
+	'Konfigurasi Firebase belum diisi. Ikuti README.md.':
+		'Firebase configuration is missing. See README.md.',
+	Teman: 'there',
+	'Trakta — ringkasan': 'Trakta — overview',
+	'RUANG PRIBADI': 'PERSONAL WORKSPACE',
+	'Navigasi utama': 'Main navigation',
+	Ringkasan: 'Overview',
+	'Riwayat presensi': 'Attendance history',
+	'Akun pribadi': 'Personal account',
+	'Keluar dari akun': 'Sign out of your account',
+	Keluar: 'Sign out',
+	'Ruang kerja': 'Workspace',
+	Terhubung: 'Online',
+	Offline: 'Offline',
+	'HARI BARU, KESEMPATAN BARU': "TODAY'S ATTENDANCE",
+	'Halo, {name}': 'Hi, {name}',
+	'Setiap kehadiran adalah awal dari sesuatu yang berarti.':
+		'Review your attendance and record your workday.',
+	'Tutup pemberitahuan': 'Dismiss notification',
+	'Kamu sedang offline. Presensi baru memerlukan internet.':
+		'You are offline. An internet connection is required to submit attendance.',
+	'Ringkasan kehadiran': 'Attendance summary',
+	'Jam masuk': 'Check-in time',
+	'Jam pulang': 'Check-out time',
+	'Memuat data…': 'Loading data…',
+	'Data belum tersedia': 'Data unavailable',
+	'Selamat bekerja hari ini': 'Have a good workday',
+	'Belum ada presensi masuk': 'No check-in recorded',
+	'Sampai jumpa esok hari': 'See you tomorrow',
+	'Belum ada presensi pulang': 'No check-out recorded',
+	'Kehadiran bulan ini': 'Attendance this month',
+	hari: 'days',
+	'Menyiapkan ruang presensimu…': 'Loading attendance…',
+	'Akses presensi belum diizinkan': 'Attendance access denied',
+	'Data belum dapat dimuat': 'Unable to load data',
+	'Muat ulang data': 'Reload data',
+	'TERIMA KASIH SUDAH HADIR': 'ATTENDANCE COMPLETE',
+	'Hari ini, tuntas.': "You're done for today.",
+	'Presensi masuk dan pulangmu sudah tercatat.': 'Your check-in and check-out are recorded.',
+	'Saatnya menikmati waktu istirahat.': 'Enjoy your time off.',
+	'rentang kehadiran hari ini': "Today's attendance duration",
+	'Harimu, sekilas': 'Today at a glance',
+	'HARI INI': 'TODAY',
+	'Waktu Indonesia Barat': 'Western Indonesia Time',
+	'Presensi masuk': 'Check-in',
+	'Presensi pulang': 'Check-out',
+	'Mulai hari dengan semangat': 'Waiting for check-in',
+	'Sudah tercatat': 'Recorded',
+	'Tutup hari dengan pencapaian': 'Waiting for check-out',
+	'Setiap langkah berarti.': 'Make every day count.',
+	'Setiap hari adalah kesempatan untuk tumbuh dan memberi yang terbaik.':
+		'Every day is an opportunity to grow and do your best.',
+	'Satu hari. Satu langkah lebih baik.': 'One day at a time.',
+	'Data dan foto presensimu hanya dapat diakses melalui akunmu.':
+		'Your attendance records and photos are private to your account.',
+	'Teman setiap hari kerja.': 'Daily attendance.',
+	'Zona waktu Asia/Jakarta · WIB': 'Asia/Jakarta time zone · WIB',
+	'Akses data presensi belum diizinkan. Hubungi pengelola aplikasi untuk memperbarui izin akses, lalu muat ulang data.':
+		'You do not have access to attendance data. Ask the app administrator to update your permissions, then reload.',
+	'Presensi berhasil diterima server. Selamat melanjutkan harimu!':
+		'Attendance recorded successfully.',
+	'Catat presensi masuk': 'Check in',
+	'Catat presensi pulang': 'Check out',
+	'Tambahkan foto untuk melengkapi presensimu.': 'Add a photo before submitting attendance.',
+	'LANGKAH KECIL, KOMITMEN BESAR': 'ATTENDANCE',
+	'Siap memulai hari? Lengkapi presensimu di bawah ini.': 'Complete the form below to check in.',
+	'Terima kasih untuk hari ini. Catat waktu pulangmu.': 'Complete the form below to check out.',
+	'Lokasi kerja': 'Work location',
+	'Di kantor': 'Office',
+	'Dari rumah': 'Remote',
+	'Dinas luar': 'Field work',
+	'Foto presensi': 'Attendance photo',
+	Catatan: 'Note',
+	'(opsional)': '(optional)',
+	'Apa yang akan kamu kerjakan hari ini?': 'What are you working on today?',
+	'Ada pencapaian yang ingin dicatat?': 'Is there anything you want to record?',
+	'Kamu sedang offline. Hubungkan internet untuk mengirim presensi.':
+		'You are offline. Reconnect to submit attendance.',
+	'Mengirim presensi…': 'Submitting attendance…',
+	'Konfirmasi masuk': 'Confirm check-in',
+	'Konfirmasi pulang': 'Confirm check-out',
+	'Waktu tercatat otomatis saat presensi diterima server.':
+		'The server records the time when you submit attendance.',
+	'Hubungkan internet untuk mengirim presensi.': 'Connect to the internet to submit attendance.',
+	'Foto harus berukuran maksimal 100 KB.': 'The photo must be 100 KB or smaller.',
+	'Sesi berakhir. Silakan masuk kembali.': 'Your session ended. Please sign in again.',
+	'Presensi masuk hari ini sudah tercatat.': "Today's check-in has already been recorded.",
+	'Presensi pulang hari ini sudah tercatat.': "Today's check-out has already been recorded.",
+	'Catat presensi masuk terlebih dahulu.': 'Check in before checking out.',
+	'Foto tidak ditemukan.': 'Photo not found.',
+	'Jejak kehadiranmu': 'Attendance history',
+	'Riwayat 31 presensi terakhir.': 'Last 31 attendance records.',
+	'Riwayat presensi terbaru.': 'Recent attendance records.',
+	Ringkas: 'Show fewer',
+	'Lihat semua': 'View all',
+	'Mengambil riwayat presensi…': 'Loading attendance history…',
+	'Setiap perjalanan punya awal.': 'No attendance records yet.',
+	'Presensi pertamamu akan muncul di sini.': 'Your first attendance record will appear here.',
+	'Mulai dengan mencatat kehadiran hari ini.': 'Check in to get started.',
+	Tanggal: 'Date',
+	Masuk: 'Check-in',
+	Pulang: 'Check-out',
+	Durasi: 'Duration',
+	Status: 'Status',
+	Foto: 'Photo',
+	Lengkap: 'Complete',
+	'Sudah masuk': 'Checked in',
+	'Lihat foto masuk {date}': 'View check-in photo for {date}',
+	'Lihat foto pulang {date}': 'View check-out photo for {date}',
+	'Foto masuk': 'Check-in photo',
+	'Foto pulang': 'Check-out photo',
+	'Tutup foto': 'Close photo',
+	'Mengambil foto…': 'Loading photo…',
+	'Izin kamera belum diberikan. Izinkan kamera melalui pengaturan browser atau pilih foto dari galeri/file.':
+		'Camera permission was denied. Allow camera access in your browser settings or choose a file.',
+	'Kamera tidak ditemukan. Hubungkan kamera atau pilih foto dari galeri/file.':
+		'No camera found. Connect a camera or choose a file.',
+	'Kamera belum dapat dibuka. Tutup aplikasi lain yang memakai kamera, lalu coba lagi atau pilih galeri/file.':
+		'Unable to open the camera. Close other apps using it, or choose a file.',
+	'Kamera belum dapat digunakan. Coba buka kembali atau pilih foto dari galeri/file.':
+		'The camera is unavailable. Try again or choose a file.',
+	'Kamera langsung memerlukan browser yang mendukung dan koneksi HTTPS atau localhost. Kamu tetap bisa memilih foto dari galeri/file.':
+		'Live camera access requires a supported browser on HTTPS or localhost. You can still choose a file.',
+	'Foto belum berhasil diambil. Coba lagi atau pilih galeri/file.':
+		'Unable to capture a photo. Try again or choose a file.',
+	'Pratinjau kamera presensi': 'Attendance camera preview',
+	'Tutup kamera': 'Close camera',
+	'Membuka kamera… Izinkan akses jika diminta.': 'Opening camera… Allow access if prompted.',
+	'Mengambil foto kamera…': 'Capturing photo…',
+	'Ambil foto': 'Take photo',
+	'Pratinjau foto presensi yang akan dikirim': 'Preview of the attendance photo',
+	'Menyiapkan fotomu…': 'Processing your photo…',
+	'Foto untuk presensimu': 'Attendance photo',
+	'Ambil foto langsung atau pilih dari perangkatmu.':
+		'Take a photo or choose one from your device.',
+	'Membuka kamera…': 'Opening camera…',
+	'Kamera aktif': 'Camera on',
+	'Buka kamera': 'Open camera',
+	'Pilih galeri/file': 'Choose gallery/file',
+	'Pilih atau ambil foto presensi': 'Choose or take an attendance photo',
+	'JPG, PNG, WebP · Otomatis diperkecil hingga 100 KB':
+		'JPG, PNG, WebP · Automatically compressed to 100 KB',
+	'Foto gagal diproses. Coba foto lain.': 'Unable to process the photo. Try another one.',
+	'Gunakan foto JPG, PNG, atau WebP. Ubah foto HEIC ke JPG terlebih dahulu.':
+		'Use a JPG, PNG, or WebP photo. Convert HEIC photos to JPG first.',
+	'Ukuran foto awal maksimal 20 MB.': 'The original photo must be 20 MB or smaller.',
+	'File foto kosong. Pilih foto lain.': 'The photo file is empty. Choose another one.',
+	'Foto tidak dapat dibaca. Pilih foto JPG, PNG, atau WebP yang valid.':
+		'Unable to read this photo. Choose a valid JPG, PNG, or WebP file.',
+	'Browser tidak mendukung pengolahan foto.': 'This browser cannot process photos.',
+	'Foto gagal dibaca. Silakan coba lagi.': 'Unable to read the photo. Try again.',
+	'Foto belum bisa diperkecil menjadi 100 KB. Pilih foto lain.':
+		'Unable to compress the photo to 100 KB. Choose another one.',
+	'Selalu dekat,': 'Easy access',
+	'di perangkatmu.': 'on your device.',
+	'Pasang Trakta untuk akses lebih praktis.': 'Install Trakta for quick access.',
+	'Pasang aplikasi': 'Install app',
+	'Android/desktop: menu browser → Instal aplikasi. iPhone: Safari → Bagikan → Tambahkan ke Layar Utama. Gunakan HTTPS atau localhost.':
+		'Android or desktop: browser menu → Install app. iPhone: Safari → Share → Add to Home Screen. Use HTTPS or localhost.',
+	'Pemasangan belum berhasil. Coba melalui menu browser.':
+		'Unable to install the app. Try the browser menu.'
+};
+
+export function translate(
+	locale: Locale,
+	message: string,
+	values?: Record<string, string>
+): string {
+	const text = locale === 'en' && Object.hasOwn(english, message) ? english[message] : message;
+	if (!values) return text;
+	return text.replace(/\{(\w+)\}/g, (placeholder, key: string) => values[key] ?? placeholder);
+}

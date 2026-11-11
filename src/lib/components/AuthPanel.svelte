@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import { login, register, resetPassword, friendlyError } from '#lib/firebase/auth.ts';
 	import { firebaseConfigured } from '#lib/firebase/client.ts';
 	import Brand from './Brand.svelte';
@@ -29,7 +30,7 @@
 				if (name.trim().length < 2) throw new Error('Nama minimal 2 karakter.');
 				await register(name, email, password);
 			} else if (mode === 'reset') {
-				await resetPassword(email);
+				await resetPassword(email, preferences.locale);
 				message =
 					'Jika email terdaftar, tautan pemulihan akan dikirim. Periksa kotak masuk dan spam.';
 			} else await login(email, password);
@@ -39,15 +40,17 @@
 			busy = false;
 		}
 	}
+	const preferences = getPreferences();
+	const { t } = preferences;
 </script>
 
 <div class="auth-shell">
-	<section class="auth-story" aria-label="Tentang Trakta">
+	<section class="auth-story" aria-label={t('Tentang Trakta')}>
 		<Brand light />
 		<div class="story-content">
-			<span class="eyebrow">SETIAP HARI, LEBIH BERARTI</span>
-			<h1>Awali hari.<br />Catat kontribusi.</h1>
-			<p>Presensi yang sederhana, supaya kamu bisa fokus pada hal yang lebih penting.</p>
+			<span class="eyebrow">{t('SETIAP HARI, LEBIH BERARTI')}</span>
+			<h1>{t('Awali hari.')}<br />{t('Catat kontribusi.')}</h1>
+			<p>{t('Presensi yang sederhana, supaya kamu bisa fokus pada hal yang lebih penting.')}</p>
 			<div class="clock-art" aria-hidden="true">
 				<div class="clock-orbit orbit-one"></div>
 				<div class="clock-orbit orbit-two"></div>
@@ -58,11 +61,14 @@
 						class="hand minute"
 					></span><span class="clock-center"></span>
 				</div>
-				<span class="art-tag"><Icon name="check" size={17} /> Satu langkah, sudah tercatat.</span>
+				<span class="art-tag"
+					><Icon name="check" size={17} /> {t('Satu langkah, sudah tercatat.')}</span
+				>
 			</div>
 		</div>
 		<div class="story-footer">
-			<Icon name="shield" size={18} /> Ruang presensi pribadi untuk aktivitas harianmu.
+			<Icon name="shield" size={18} />
+			{t('Ruang presensi pribadi untuk aktivitas harianmu.')}
 		</div>
 	</section>
 	<main id="main" class="auth-main">
@@ -71,43 +77,45 @@
 			<Preferences />
 		</div>
 		<div class="auth-form-wrap">
-			<span class="mini-label">RUANG KERJAMU, LEBIH TERATUR</span>
+			<span class="mini-label">{t('RUANG KERJAMU, LEBIH TERATUR')}</span>
 			<h2>
 				{mode === 'register'
-					? 'Mari mulai hari baik.'
+					? t('Mari mulai hari baik.')
 					: mode === 'reset'
-						? 'Lupa kata sandi?'
-						: 'Selamat datang kembali.'}
+						? t('Lupa kata sandi?')
+						: t('Selamat datang kembali.')}
 			</h2>
 			<p class="muted">
 				{mode === 'register'
-					? 'Buat akun untuk mencatat presensi pertamamu.'
+					? t('Buat akun untuk mencatat presensi pertamamu.')
 					: mode === 'reset'
-						? 'Kami bantu kamu mengakses akun kembali.'
-						: 'Masuk untuk mencatat kehadiranmu hari ini.'}
+						? t('Kami bantu kamu mengakses akun kembali.')
+						: t('Masuk untuk mencatat kehadiranmu hari ini.')}
 			</p>
 			{#if !firebaseConfigured}<div class="notice setup-notice">
 					<Icon name="info" />
 					<div>
-						<strong>Satu langkah sebelum mulai</strong>
+						<strong>{t('Satu langkah sebelum mulai')}</strong>
 						<p>
-							Isi konfigurasi Firebase di <code>.env</code> sesuai panduan <code>README.md</code>,
-							lalu jalankan ulang aplikasi.
+							{t(
+								'Isi konfigurasi Firebase di {env} sesuai panduan {readme}, lalu jalankan ulang aplikasi.',
+								{ env: '.env', readme: 'README.md' }
+							)}
 						</p>
 					</div>
 				</div>{/if}
 			<form onsubmit={submit}>
-				{#if mode === 'register'}<label for="name">Nama lengkap</label><input
+				{#if mode === 'register'}<label for="name">{t('Nama lengkap')}</label><input
 						id="name"
 						autocomplete="name"
 						bind:value={name}
 						required
 						minlength="2"
 						maxlength="80"
-						placeholder="Nama yang ingin ditampilkan"
+						placeholder={t('Nama yang ingin ditampilkan')}
 						disabled={busy}
 					/>{/if}
-				<label for="email">Alamat email</label>
+				<label for="email">{t('Alamat email')}</label>
 				<div class="input-icon">
 					<Icon name="mail" size={19} /><input
 						id="email"
@@ -115,16 +123,16 @@
 						autocomplete="email"
 						bind:value={email}
 						required
-						placeholder="nama@perusahaan.com"
+						placeholder={t('nama@perusahaan.com')}
 						disabled={busy}
 					/>
 				</div>
 				{#if mode !== 'reset'}<div class="label-row">
-						<label for="password">Kata sandi</label>{#if mode === 'login'}<button
+						<label for="password">{t('Kata sandi')}</label>{#if mode === 'login'}<button
 								type="button"
 								class="text-button"
 								onclick={() => changeMode('reset')}
-								disabled={busy}>Lupa kata sandi?</button
+								disabled={busy}>{t('Lupa kata sandi?')}</button
 							>{/if}
 					</div>
 					<div class="password-input">
@@ -135,46 +143,47 @@
 							bind:value={password}
 							required
 							minlength={mode === 'register' ? 8 : 1}
-							placeholder={mode === 'register' ? 'Minimal 8 karakter' : 'Masukkan kata sandi'}
+							placeholder={mode === 'register' ? t('Minimal 8 karakter') : t('Masukkan kata sandi')}
 							disabled={busy}
 						/><button
 							type="button"
 							class="icon-button"
-							aria-label={visible ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+							aria-label={visible ? t('Sembunyikan kata sandi') : t('Tampilkan kata sandi')}
 							aria-pressed={visible}
 							onclick={() => (visible = !visible)}><Icon name="eye" size={19} /></button
 						>
 					</div>{/if}
-				{#if error}<p class="notice error" role="alert">{error}</p>{/if}
-				{#if message}<p class="notice success" role="status">{message}</p>{/if}
+				{#if error}<p class="notice error" role="alert">{t(error)}</p>{/if}
+				{#if message}<p class="notice success" role="status">{t(message)}</p>{/if}
 				<button
 					type="submit"
 					class="button primary auth-submit"
 					disabled={busy || !firebaseConfigured}
 					>{busy
-						? 'Mohon tunggu…'
+						? t('Mohon tunggu…')
 						: mode === 'register'
-							? 'Buat akun'
+							? t('Buat akun')
 							: mode === 'reset'
-								? 'Kirim tautan pemulihan'
-								: 'Masuk ke ruang kerja'}<Icon name="arrow" size={19} /></button
+								? t('Kirim tautan pemulihan')
+								: t('Masuk ke ruang kerja')}<Icon name="arrow" size={19} /></button
 				>
 			</form>
 			<p class="auth-switch">
-				{mode === 'login' ? 'Belum punya akun?' : 'Sudah punya akun?'}
+				{mode === 'login' ? t('Belum punya akun?') : t('Sudah punya akun?')}
 				<button
 					type="button"
 					class="text-button"
 					disabled={busy}
 					onclick={() => changeMode(mode === 'login' ? 'register' : 'login')}
-					>{mode === 'login' ? 'Daftar sekarang' : 'Masuk di sini'}</button
+					>{mode === 'login' ? t('Daftar sekarang') : t('Masuk di sini')}</button
 				>
 			</p>
 			<div class="auth-assurance">
-				<Icon name="shield" size={16} /> Terhubung dengan Firebase Authentication
+				<Icon name="shield" size={16} />
+				{t('Terhubung dengan Firebase Authentication')}
 			</div>
 		</div>
-		<div class="auth-bottom">Awali hari dengan tujuan. Pulang dengan pencapaian.</div>
+		<div class="auth-bottom">{t('Awali hari dengan tujuan. Pulang dengan pencapaian.')}</div>
 	</main>
 </div>
 

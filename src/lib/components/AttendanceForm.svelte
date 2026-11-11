@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import type { AttendanceKind, CompressedPhoto, WorkMode } from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
 	import { compressPhoto } from '#lib/utils/image.ts';
@@ -20,7 +21,6 @@
 	let error = $state('');
 	let cameraActive = $state(false);
 	let selectionVersion = 0;
-	const label = $derived(kind === 'checkIn' ? 'masuk' : 'pulang');
 
 	async function choosePhoto(file: File) {
 		const version = ++selectionVersion;
@@ -55,32 +55,36 @@
 			submitting = false;
 		}
 	}
+	const preferences = getPreferences();
+	const { t } = preferences;
 </script>
 
 <section class="card attendance-form" aria-labelledby="attendance-title">
 	<div class="section-heading">
 		<div>
-			<div class="section-kicker">LANGKAH KECIL, KOMITMEN BESAR</div>
-			<h2 id="attendance-title">Catat presensi {label}</h2>
+			<div class="section-kicker">{t('LANGKAH KECIL, KOMITMEN BESAR')}</div>
+			<h2 id="attendance-title">
+				{t(kind === 'checkIn' ? 'Catat presensi masuk' : 'Catat presensi pulang')}
+			</h2>
 		</div>
 		<span class="icon-tile"><Icon name={kind === 'checkIn' ? 'enter' : 'exit'} size={22} /></span>
 	</div>
 	<p class="section-description">
 		{kind === 'checkIn'
-			? 'Siap memulai hari? Lengkapi presensimu di bawah ini.'
-			: 'Terima kasih untuk hari ini. Catat waktu pulangmu.'}
+			? t('Siap memulai hari? Lengkapi presensimu di bawah ini.')
+			: t('Terima kasih untuk hari ini. Catat waktu pulangmu.')}
 	</p>
 	<form onsubmit={submit}>
 		<fieldset disabled={submitting || processing}>
-			<legend>Lokasi kerja</legend>
+			<legend>{t('Lokasi kerja')}</legend>
 			<div class="mode-options">
 				{#each Object.entries(WORK_MODES) as [value, text] (value)}<label
 						class={{ selected: mode === value }}
-						><input type="radio" name="work-mode" {value} bind:group={mode} />{text}</label
+						><input type="radio" name="work-mode" {value} bind:group={mode} />{t(text)}</label
 					>{/each}
 			</div>
 		</fieldset>
-		<label for="photo">Foto presensi <span class="required">*</span></label>
+		<label for="photo">{t('Foto presensi')} <span class="required">*</span></label>
 		<PhotoPicker
 			{photo}
 			{processing}
@@ -90,31 +94,36 @@
 				cameraActive = active;
 			}}
 		/>
-		<label for="note">Catatan <span class="optional">(opsional)</span></label><textarea
+		<label for="note">{t('Catatan')} <span class="optional">{t('(opsional)')}</span></label
+		><textarea
 			id="note"
 			rows="2"
 			maxlength="300"
 			bind:value={note}
 			disabled={submitting}
 			placeholder={kind === 'checkIn'
-				? 'Apa yang akan kamu kerjakan hari ini?'
-				: 'Ada pencapaian yang ingin dicatat?'}></textarea>
+				? t('Apa yang akan kamu kerjakan hari ini?')
+				: t('Ada pencapaian yang ingin dicatat?')}></textarea>
 		<div class="character-count">{note.length}/300</div>
-		{#if error}<p class="notice error" role="alert">{error}</p>{/if}
+		{#if error}<p class="notice error" role="alert">{t(error)}</p>{/if}
 		{#if !online}<p class="notice" role="status">
-				Kamu sedang offline. Hubungkan internet untuk mengirim presensi.
+				{t('Kamu sedang offline. Hubungkan internet untuk mengirim presensi.')}
 			</p>{/if}
 		<button
 			type="submit"
 			class="button primary submit-attendance"
 			disabled={!online || processing || submitting || cameraActive || !photo}
-			>{submitting ? 'Mengirim presensi…' : `Konfirmasi ${label}`}<Icon
-				name="arrow"
-				size={18}
-			/></button
+			>{t(
+				submitting
+					? 'Mengirim presensi…'
+					: kind === 'checkIn'
+						? 'Konfirmasi masuk'
+						: 'Konfirmasi pulang'
+			)}<Icon name="arrow" size={18} /></button
 		>
 		<p class="timestamp-note">
-			<Icon name="shield" size={13} /> Waktu tercatat otomatis saat presensi diterima server.
+			<Icon name="shield" size={13} />
+			{t('Waktu tercatat otomatis saat presensi diterima server.')}
 		</p>
 	</form>
 </section>

@@ -6,6 +6,7 @@ import {
 	updateProfile
 } from 'firebase/auth';
 import { getFirebase } from './client';
+import type { Locale } from '#lib/i18n.ts';
 
 export async function login(email: string, password: string) {
 	return signInWithEmailAndPassword(getFirebase().auth, email.trim(), password);
@@ -18,8 +19,10 @@ export async function register(name: string, email: string, password: string) {
 	return result;
 }
 
-export function resetPassword(email: string) {
-	return sendPasswordResetEmail(getFirebase().auth, email.trim());
+export function resetPassword(email: string, locale: Locale = 'id') {
+	const { auth } = getFirebase();
+	auth.languageCode = locale;
+	return sendPasswordResetEmail(auth, email.trim());
 }
 
 export function logout() {

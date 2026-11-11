@@ -9,6 +9,9 @@
 				if (localStorage.getItem('trakta.theme') === 'neo') {
 					document.documentElement.dataset.theme = 'neo';
 				}
+				if (localStorage.getItem('trakta.locale') === 'en') {
+					document.documentElement.lang = 'en';
+				}
 			} catch {}
 		</script>
 		%sveltekit.head%

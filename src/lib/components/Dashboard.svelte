@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount } from 'svelte';
 	import type { User } from 'firebase/auth';
 	import { WORK_MODES, type AttendanceDay } from '#lib/types/attendance.ts';
@@ -12,6 +13,9 @@
 	import PwaInstall from './PwaInstall.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	import Preferences from './Preferences.svelte';
+
+	const preferences = getPreferences();
+	const { t } = preferences;
 	let { user }: { user: Pick<User, 'uid' | 'displayName' | 'email'> } = $props();
 	let days = $state.raw<AttendanceDay[]>([]);
 	let loading = $state(true);
@@ -24,7 +28,7 @@
 	let signingOut = $state(false);
 	const today = $derived(days.find((day) => day.dateKey === dateKey(now)));
 	const firstName = $derived(
-		(user.displayName || user.email?.split('@')[0] || 'Teman').split(' ')[0]
+		(user.displayName || user.email?.split('@')[0] || t('Teman')).split(' ')[0]
 	);
 	const initials = $derived((user.displayName || user.email || 'T').slice(0, 2).toUpperCase());
 	const monthDays = $derived(
@@ -88,23 +92,27 @@
 />
 <div class="app-shell">
 	<aside class="sidebar">
-		<a class="brand-link" href="#ringkasan" aria-label="Trakta — ringkasan"><Brand /></a>
-		<div class="workspace-label">RUANG PRIBADI</div>
-		<nav aria-label="Navigasi utama">
+		<a class="brand-link" href="#ringkasan" aria-label={t('Trakta — ringkasan')}><Brand /></a>
+		<div class="workspace-label">{t('RUANG PRIBADI')}</div>
+		<nav aria-label={t('Navigasi utama')}>
 			<a href="#ringkasan" class="nav-link active"
-				><Icon name="grid" size={18} /> Ringkasan <span class="nav-dot"></span></a
-			><a href="#riwayat" class="nav-link"><Icon name="calendar" size={19} /> Riwayat presensi</a>
+				><Icon name="grid" size={18} /> {t('Ringkasan')} <span class="nav-dot"></span></a
+			><a href="#riwayat" class="nav-link"
+				><Icon name="calendar" size={19} /> {t('Riwayat presensi')}</a
+			>
 		</nav>
 		<div class="sidebar-bottom">
 			<PwaInstall />
 			<div class="sidebar-user">
 				<span class="avatar">{initials}</span>
-				<div><strong>{user.displayName || firstName}</strong><small>Akun pribadi</small></div>
+				<div>
+					<strong>{user.displayName || firstName}</strong><small>{t('Akun pribadi')}</small>
+				</div>
 				<button
 					type="button"
 					class="icon-button"
-					aria-label="Keluar dari akun"
-					title="Keluar"
+					aria-label={t('Keluar dari akun')}
+					title={t('Keluar')}
 					onclick={signOut}
 					disabled={signingOut}><Icon name="exit" size={18} /></button
 				>
@@ -113,16 +121,18 @@
 	</aside>
 	<div class="main-shell">
 		<header class="topbar">
-			<div class="desktop-breadcrumb">Ruang kerja <span>/</span> <strong>Ringkasan</strong></div>
+			<div class="desktop-breadcrumb">
+				{t('Ruang kerja')} <span>/</span> <strong>{t('Ringkasan')}</strong>
+			</div>
 			<div class="mobile-logo"><Brand /></div>
 			<div class="dashboard-preferences"><Preferences /></div>
 			<div class="topbar-right">
 				<span class={['connection', { offline: !online }]}
-					><span></span>{online ? 'Terhubung' : 'Offline'}</span
+					><span></span>{online ? t('Terhubung') : t('Offline')}</span
 				><span class="topbar-divider"></span><span class="avatar small">{initials}</span><button
 					type="button"
 					class="mobile-logout icon-button"
-					aria-label="Keluar dari akun"
+					aria-label={t('Keluar dari akun')}
 					onclick={signOut}
 					disabled={signingOut}><Icon name="exit" size={18} /></button
 				>
@@ -131,29 +141,32 @@
 		<main id="main">
 			<div id="ringkasan" class="page-heading">
 				<div>
-					<p class="mini-label">HARI BARU, KESEMPATAN BARU</p>
-					<h1>Halo, {firstName}<span class="greeting-dot">.</span></h1>
-					<p class="muted">Setiap kehadiran adalah awal dari sesuatu yang berarti.</p>
+					<p class="mini-label">{t('HARI BARU, KESEMPATAN BARU')}</p>
+					<h1>{t('Halo, {name}', { name: firstName })}<span class="greeting-dot">.</span></h1>
+					<p class="muted">{t('Setiap kehadiran adalah awal dari sesuatu yang berarti.')}</p>
 				</div>
 				<div class="date-label">
-					<Icon name="calendar" size={16} /><span>{formatDate(now)}</span>
+					<Icon name="calendar" size={16} /><span>{formatDate(now, {}, preferences.locale)}</span>
 				</div>
 			</div>
 			{#if message}<div class="notice success status-message" role="status">
-					<Icon name="check" size={18} />{message}<button
+					<Icon name="check" size={18} />{t(message)}<button
 						type="button"
 						class="icon-button"
-						aria-label="Tutup pemberitahuan"
+						aria-label={t('Tutup pemberitahuan')}
 						onclick={() => (message = '')}><Icon name="close" size={16} /></button
 					>
 				</div>{/if}
 			{#if error}<div class="notice error status-message" role="alert">
-					{error}<button type="button" class="text-button" onclick={subscribe}>Coba lagi</button>
+					{t(error)}<button type="button" class="text-button" onclick={subscribe}
+						>{t('Coba lagi')}</button
+					>
 				</div>{/if}
 			{#if !online}<div class="notice offline-notice" role="status">
-					<Icon name="wifi" size={17} /> Kamu sedang offline. Presensi baru memerlukan internet.
+					<Icon name="wifi" size={17} />
+					{t('Kamu sedang offline. Presensi baru memerlukan internet.')}
 				</div>{/if}
-			<section class="stats-grid" aria-label="Ringkasan kehadiran" aria-busy={loading}>
+			<section class="stats-grid" aria-label={t('Ringkasan kehadiran')} aria-busy={loading}>
 				{#if loading}
 					{#each ['masuk', 'pulang', 'bulan'] as item (item)}
 						<div class="card stat-card" aria-hidden="true">
@@ -168,47 +181,54 @@
 					<div class="card stat-card">
 						<span class="stat-icon green"><Icon name="enter" size={20} /></span>
 						<div>
-							<p>Jam masuk</p>
+							<p>{t('Jam masuk')}</p>
 							<strong
-								>{formatTime(today?.checkIn.timestamp?.toDate())}<small
+								>{formatTime(today?.checkIn.timestamp?.toDate(), preferences.locale)}<small
 									>{today?.checkIn ? 'WIB' : ''}</small
 								></strong
 							><span
-								>{loading
-									? 'Memuat data…'
-									: loadError
-										? 'Data belum tersedia'
-										: today?.checkIn
-											? 'Selamat bekerja hari ini'
-											: 'Belum ada presensi masuk'}</span
+								>{loadError
+									? t('Data belum tersedia')
+									: today?.checkIn
+										? t('Selamat bekerja hari ini')
+										: t('Belum ada presensi masuk')}</span
 							>
 						</div>
 					</div>
 					<div class="card stat-card">
 						<span class="stat-icon orange"><Icon name="exit" size={20} /></span>
 						<div>
-							<p>Jam pulang</p>
+							<p>{t('Jam pulang')}</p>
 							<strong
-								>{formatTime(today?.checkOut?.timestamp?.toDate())}<small
+								>{formatTime(today?.checkOut?.timestamp?.toDate(), preferences.locale)}<small
 									>{today?.checkOut ? 'WIB' : ''}</small
 								></strong
 							><span
-								>{loading
-									? 'Memuat data…'
-									: loadError
-										? 'Data belum tersedia'
-										: today?.checkOut
-											? 'Sampai jumpa esok hari'
-											: 'Belum ada presensi pulang'}</span
+								>{loadError
+									? t('Data belum tersedia')
+									: today?.checkOut
+										? t('Sampai jumpa esok hari')
+										: t('Belum ada presensi pulang')}</span
 							>
 						</div>
 					</div>
 					<div class="card stat-card">
 						<span class="stat-icon blue"><Icon name="calendar" size={20} /></span>
 						<div>
-							<p>Kehadiran bulan ini</p>
-							<strong>{loading || loadError ? '—' : monthDays.length}<small>hari</small></strong
-							><span>{formatDate(now, { weekday: undefined, day: undefined, month: 'long' })}</span>
+							<p>{t('Kehadiran bulan ini')}</p>
+							<strong
+								>{loadError ? '—' : monthDays.length}<small
+									>{preferences.locale === 'en' && !loadError && monthDays.length === 1
+										? 'day'
+										: t('hari')}</small
+								></strong
+							><span
+								>{formatDate(
+									now,
+									{ weekday: undefined, day: undefined, month: 'long' },
+									preferences.locale
+								)}</span
+							>
 						</div>
 					</div>
 				{/if}
@@ -216,32 +236,37 @@
 			<div class="dashboard-grid">
 				<div class="primary-column">
 					{#if loading}<section class="card">
-							<LoadingSkeleton label="Menyiapkan ruang presensimu…" />
+							<LoadingSkeleton label={t('Menyiapkan ruang presensimu…')} />
 						</section>{:else if loadError}<section class="card loading-card" role="alert">
 							<Icon name="info" size={28} />
 							<h2>
-								{permissionDenied ? 'Akses presensi belum diizinkan' : 'Data belum dapat dimuat'}
+								{permissionDenied
+									? t('Akses presensi belum diizinkan')
+									: t('Data belum dapat dimuat')}
 							</h2>
-							<p>{loadError}</p>
+							<p>{t(loadError)}</p>
 							<button type="button" class="button secondary" onclick={subscribe}
-								>Muat ulang data</button
+								>{t('Muat ulang data')}</button
 							>
 						</section>{:else if today?.checkOut}<section class="card completed-card">
 							<div class="complete-symbol"><Icon name="check" size={38} /></div>
-							<span class="mini-label">TERIMA KASIH SUDAH HADIR</span>
-							<h2>Hari ini, tuntas.</h2>
+							<span class="mini-label">{t('TERIMA KASIH SUDAH HADIR')}</span>
+							<h2>{t('Hari ini, tuntas.')}</h2>
 							<p>
-								Presensi masuk dan pulangmu sudah tercatat.<br />Saatnya menikmati waktu istirahat.
+								{t('Presensi masuk dan pulangmu sudah tercatat.')}<br />{t(
+									'Saatnya menikmati waktu istirahat.'
+								)}
 							</p>
 							<div class="completed-duration">
 								<Icon name="clock" size={18} /><strong
 									>{durationLabel(
 										today.checkIn.timestamp?.toDate(),
-										today.checkOut.timestamp?.toDate()
+										today.checkOut.timestamp?.toDate(),
+										preferences.locale
 									)}</strong
-								><span>rentang kehadiran hari ini</span>
+								><span>{t('rentang kehadiran hari ini')}</span>
 							</div>
-							<span class="completion-date">{formatDate(now)}</span>
+							<span class="completion-date">{formatDate(now, {}, preferences.locale)}</span>
 						</section>{:else}{#key `${dateKey(now)}-${nextKind}`}<AttendanceForm
 								uid={user.uid}
 								kind={nextKind}
@@ -252,22 +277,22 @@
 				<aside class="support-column">
 					<section class="today-card">
 						<div class="section-heading">
-							<h2>Harimu, sekilas</h2>
-							<span class="today-badge">HARI INI</span>
+							<h2>{t('Harimu, sekilas')}</h2>
+							<span class="today-badge">{t('HARI INI')}</span>
 						</div>
-						<div class="live-clock">{formatTime(now)}<span>WIB</span></div>
-						<p class="clock-caption">Waktu Indonesia Barat</p>
+						<div class="live-clock">{formatTime(now, preferences.locale)}<span>WIB</span></div>
+						<p class="clock-caption">{t('Waktu Indonesia Barat')}</p>
 						<div class="timeline">
 							<div class={['timeline-item', { done: today?.checkIn }]}>
 								<span class="timeline-marker"
 									>{#if today?.checkIn}<Icon name="check" size={12} />{:else}1{/if}</span
 								>
 								<div>
-									<strong>Presensi masuk</strong>
+									<strong>{t('Presensi masuk')}</strong>
 									<p>
 										{today?.checkIn
-											? `${formatTime(today.checkIn.timestamp?.toDate())} WIB · ${WORK_MODES[today.checkIn.mode]}`
-											: 'Mulai hari dengan semangat'}
+											? `${formatTime(today.checkIn.timestamp?.toDate(), preferences.locale)} WIB · ${t(WORK_MODES[today.checkIn.mode])}`
+											: t('Mulai hari dengan semangat')}
 									</p>
 								</div>
 							</div>
@@ -276,11 +301,11 @@
 									>{#if today?.checkOut}<Icon name="check" size={12} />{:else}2{/if}</span
 								>
 								<div>
-									<strong>Presensi pulang</strong>
+									<strong>{t('Presensi pulang')}</strong>
 									<p>
 										{today?.checkOut
-											? `${formatTime(today.checkOut.timestamp?.toDate())} WIB · Sudah tercatat`
-											: 'Tutup hari dengan pencapaian'}
+											? `${formatTime(today.checkOut.timestamp?.toDate(), preferences.locale)} WIB · ${t('Sudah tercatat')}`
+											: t('Tutup hari dengan pencapaian')}
 									</p>
 								</div>
 							</div>
@@ -288,22 +313,22 @@
 					</section>
 					<section class="tip-card">
 						<span class="tip-icon"><Icon name="spark" size={20} /></span>
-						<h2>Setiap langkah berarti.</h2>
-						<p>Setiap hari adalah kesempatan untuk tumbuh dan memberi yang terbaik.</p>
+						<h2>{t('Setiap langkah berarti.')}</h2>
+						<p>{t('Setiap hari adalah kesempatan untuk tumbuh dan memberi yang terbaik.')}</p>
 						<div class="tip-line"></div>
-						<span>Satu hari. Satu langkah lebih baik.</span>
+						<span>{t('Satu hari. Satu langkah lebih baik.')}</span>
 					</section>
 					<div class="privacy-note">
 						<Icon name="shield" size={18} />
-						<p>Data dan foto presensimu hanya dapat diakses melalui akunmu.</p>
+						<p>{t('Data dan foto presensimu hanya dapat diakses melalui akunmu.')}</p>
 					</div>
 					<div class="mobile-install"><PwaInstall /></div>
 				</aside>
 			</div>
 			{#if !loadError}<AttendanceHistory {days} uid={user.uid} {loading} />{/if}
 			<footer class="page-footer">
-				<span>Trakta <span class="muted">Teman setiap hari kerja.</span></span><span
-					>Zona waktu Asia/Jakarta · WIB</span
+				<span>Trakta <span class="muted">{t('Teman setiap hari kerja.')}</span></span><span
+					>{t('Zona waktu Asia/Jakarta · WIB')}</span
 				>
 			</footer>
 		</main>

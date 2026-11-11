@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount, tick } from 'svelte';
 	import type { CompressedPhoto } from '#lib/types/attendance.ts';
 	import Icon from './Icon.svelte';
@@ -148,6 +149,8 @@
 			stopCamera();
 		};
 	});
+	const preferences = getPreferences();
+	const { t } = preferences;
 </script>
 
 <svelte:document
@@ -169,7 +172,7 @@
 				autoplay
 				playsinline
 				muted
-				aria-label="Pratinjau kamera presensi"
+				aria-label={t('Pratinjau kamera presensi')}
 				onloadeddata={(event) => {
 					frameReady = event.currentTarget.videoWidth > 0 && event.currentTarget.videoHeight > 0;
 				}}
@@ -177,33 +180,37 @@
 			<button
 				type="button"
 				class="icon-button close-camera"
-				aria-label="Tutup kamera"
+				aria-label={t('Tutup kamera')}
 				onclick={stopCamera}><Icon name="close" /></button
 			>
 			{#if cameraState === 'starting'}<div class="camera-loading" role="status">
-					<span class="spinner"></span><span>Membuka kamera… Izinkan akses jika diminta.</span>
+					<span class="spinner"></span><span
+						>{t('Membuka kamera… Izinkan akses jika diminta.')}</span
+					>
 				</div>{/if}
 			<button
 				type="button"
 				class="button primary shutter"
 				disabled={!frameReady || cameraState !== 'live' || disabled || processing || taking}
 				onclick={takePhoto}
-				><Icon name="camera" size={18} />{taking ? 'Mengambil foto…' : 'Ambil foto'}</button
+				><Icon name="camera" size={18} />{taking
+					? t('Mengambil foto kamera…')
+					: t('Ambil foto')}</button
 			>
 		{:else if photo}
 			<img
 				src={photo.dataUrl}
 				width={photo.width}
 				height={photo.height}
-				alt="Pratinjau foto presensi yang akan dikirim"
+				alt={t('Pratinjau foto presensi yang akan dikirim')}
 			/>
 			<span class="photo-size"
 				><Icon name="check" size={14} /> {(photo.bytes / 1000).toFixed(1)} KB</span
 			>
 		{:else}
 			<div class="upload-icon"><Icon name="camera" size={25} /></div>
-			<strong>{processing ? 'Menyiapkan fotomu…' : 'Foto untuk presensimu'}</strong>
-			<p>Ambil foto langsung atau pilih dari perangkatmu.</p>
+			<strong>{processing ? t('Menyiapkan fotomu…') : t('Foto untuk presensimu')}</strong>
+			<p>{t('Ambil foto langsung atau pilih dari perangkatmu.')}</p>
 		{/if}
 	</div>
 	<div class="source-options">
@@ -213,17 +220,17 @@
 			onclick={openCamera}
 			disabled={disabled || processing || taking || cameraState !== 'closed'}
 			><Icon name="camera" size={16} />{cameraState === 'starting'
-				? 'Membuka kamera…'
+				? t('Membuka kamera…')
 				: cameraState === 'live'
-					? 'Kamera aktif'
-					: 'Buka kamera'}</button
+					? t('Kamera aktif')
+					: t('Buka kamera')}</button
 		>
 		<button
 			type="button"
 			class="button secondary"
 			onclick={openGallery}
 			disabled={disabled || processing || taking}
-			><Icon name="image" size={16} />Pilih galeri/file</button
+			><Icon name="image" size={16} />{t('Pilih galeri/file')}</button
 		>
 	</div>
 	<input
@@ -235,12 +242,13 @@
 		onclick={stopCamera}
 		onchange={chooseFile}
 		disabled={disabled || processing || taking}
-		aria-label="Pilih atau ambil foto presensi"
+		aria-label={t('Pilih atau ambil foto presensi')}
 		aria-describedby="photo-help"
 	/>
-	{#if cameraError}<p class="notice camera-error" role="alert">{cameraError}</p>{/if}
+	{#if cameraError}<p class="notice camera-error" role="alert">{t(cameraError)}</p>{/if}
 	<p id="photo-help" class="field-help">
-		<Icon name="image" size={13} /> JPG, PNG, WebP · Otomatis diperkecil hingga 100 KB
+		<Icon name="image" size={13} />
+		{t('JPG, PNG, WebP · Otomatis diperkecil hingga 100 KB')}
 	</p>
 </div>
 

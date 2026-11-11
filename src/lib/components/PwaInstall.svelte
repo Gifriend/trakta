@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount } from 'svelte';
 	import Icon from './Icon.svelte';
 	interface InstallEvent extends Event {
@@ -31,6 +32,8 @@
 			error = 'Pemasangan belum berhasil. Coba melalui menu browser.';
 		}
 	}
+	const preferences = getPreferences();
+	const { t } = preferences;
 </script>
 
 <svelte:window
@@ -42,14 +45,15 @@
 />
 {#if !installed}<div class="install-card">
 		<div class="install-icon"><Icon name="download" size={20} /></div>
-		<strong>Selalu dekat,<br />di perangkatmu.</strong>
-		<p>Pasang Trakta untuk akses lebih praktis.</p>
+		<strong>{t('Selalu dekat,')}<br />{t('di perangkatmu.')}</strong>
+		<p>{t('Pasang Trakta untuk akses lebih praktis.')}</p>
 		<button type="button" class="button secondary" onclick={install}
-			>Pasang aplikasi <Icon name="arrow" size={15} /></button
+			>{t('Pasang aplikasi')} <Icon name="arrow" size={15} /></button
 		>{#if help}<p class="install-help">
-				Android/desktop: menu browser → Instal aplikasi. iPhone: Safari → Bagikan → Tambahkan ke
-				Layar Utama. Gunakan HTTPS atau localhost.
-			</p>{/if}{#if error}<p role="alert">{error}</p>{/if}
+				{t(
+					'Android/desktop: menu browser → Instal aplikasi. iPhone: Safari → Bagikan → Tambahkan ke Layar Utama. Gunakan HTTPS atau localhost.'
+				)}
+			</p>{/if}{#if error}<p role="alert">{t(error)}</p>{/if}
 	</div>{/if}
 
 <style>

@@ -1,20 +1,34 @@
 <script lang="ts">
 	import { getPreferences, type Theme } from '#lib/preferences.ts';
+	import type { Locale } from '#lib/i18n.ts';
 
 	const preferences = getPreferences();
+	const { t } = preferences;
 </script>
 
 <div class="preferences">
-	<label>
-		<span>Tema</span>
+	<div class="preference-control">
+		<label for="trakta-theme">{t('Tema')}</label>
 		<select
+			id="trakta-theme"
 			value={preferences.theme}
 			onchange={(event) => preferences.setTheme(event.currentTarget.value as Theme)}
 		>
 			<option value="classic">Trakta</option>
 			<option value="neo">Neobrutalism</option>
 		</select>
-	</label>
+	</div>
+	<div class="preference-control">
+		<label for="trakta-language">{t('Bahasa')}</label>
+		<select
+			id="trakta-language"
+			value={preferences.locale}
+			onchange={(event) => preferences.setLocale(event.currentTarget.value as Locale)}
+		>
+			<option value="id" lang="id">Indonesia</option>
+			<option value="en" lang="en">English</option>
+		</select>
+	</div>
 </div>
 
 <style>
@@ -24,10 +38,12 @@
 		flex-wrap: wrap;
 		gap: 10px;
 	}
-	label {
+	.preference-control {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+	}
+	label {
 		margin: 0;
 		font-size: 12px;
 	}

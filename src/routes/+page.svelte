@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount } from 'svelte';
 	import { onIdTokenChanged, type User } from 'firebase/auth';
 	import { firebaseConfigured, getFirebase } from '#lib/firebase/client.ts';
@@ -29,31 +30,35 @@
 			loading = false;
 		}
 	});
+	const preferences = getPreferences();
+	const { t } = preferences;
 </script>
 
 <svelte:head
 	><title>Trakta</title><meta
 		name="description"
-		content="Catat presensi masuk dan pulang, lengkapi dengan foto, dan simpan jejak kehadiran harianmu dengan Trakta."
+		content={t(
+			'Catat presensi masuk dan pulang, lengkapi dengan foto, dan simpan jejak kehadiran harianmu dengan Trakta.'
+		)}
 	/></svelte:head
 >
 {#if loading}<main id="main">
-		<LoadingSkeleton variant="page" label="Menyiapkan harimu…" />
+		<LoadingSkeleton variant="page" label={t('Menyiapkan harimu…')} />
 	</main>{:else if error}<main id="main" class="boot-screen">
-		<h1>Belum dapat terhubung</h1>
-		<p class="notice error" role="alert">{error}</p>
+		<h1>{t('Belum dapat terhubung')}</h1>
+		<p class="notice error" role="alert">{t(error)}</p>
 		<button type="button" class="button primary" onclick={() => window.location.reload()}
-			>Coba lagi</button
+			>{t('Coba lagi')}</button
 		>
 	</main>{:else if user}{#await import('#lib/components/Dashboard.svelte')}<main id="main">
-			<LoadingSkeleton variant="page" label="Membuka ruang kerjamu…" />
+			<LoadingSkeleton variant="page" label={t('Membuka ruang kerjamu…')} />
 		</main>{:then { default: Dashboard }}{#key user.uid}<Dashboard {user} />{/key}{:catch}<main
 			id="main"
 			class="boot-screen"
 		>
-			<p>Ruang kerja gagal dimuat. Periksa koneksi internet.</p>
+			<p>{t('Ruang kerja gagal dimuat. Periksa koneksi internet.')}</p>
 			<button type="button" class="button primary" onclick={() => window.location.reload()}
-				>Coba lagi</button
+				>{t('Coba lagi')}</button
 			>
 		</main>{/await}{:else}<AuthPanel />{/if}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getPreferences } from '#lib/preferences.ts';
 	import type { AttendanceDay, AttendanceKind } from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
 	import { dateFromKey, formatDate, formatTime, durationLabel } from '#lib/utils/date.ts';
@@ -9,7 +10,7 @@
 	let { days, uid, loading }: { days: AttendanceDay[]; uid: string; loading: boolean } = $props();
 	let expanded = $state(false);
 	let photo = $state('');
-	let photoLabel = $state('');
+	let selectedPhoto = $state<{ dateKey: string; kind: AttendanceKind }>();
 	let busy = $state(false);
 	let error = $state('');
 	let photoDialog: HTMLDialogElement;
@@ -20,7 +21,7 @@
 		busy = true;
 		error = '';
 		photo = '';
-		photoLabel = `Foto ${kind === 'checkIn' ? 'masuk' : 'pulang'} · ${formatDate(dateFromKey(day.dateKey))}`;
+		selectedPhoto = { dateKey: day.dateKey, kind };
 		photoDialog.showModal();
 		try {
 			const result = await loadPhoto(uid, day.dateKey, kind);
@@ -36,70 +37,88 @@
 		photo = '';
 		busy = false;
 	}
+	const preferences = getPreferences();
+	const { t } = preferences;
+	const photoLabel = $derived(
+		selectedPhoto
+			? `${t(selectedPhoto.kind === 'checkIn' ? 'Foto masuk' : 'Foto pulang')} · ${formatDate(dateFromKey(selectedPhoto.dateKey), {}, preferences.locale)}`
+			: ''
+	);
 </script>
 
 <section id="riwayat" class="card history-card" aria-labelledby="history-title">
 	<div class="section-heading history-heading">
 		<div>
-			<h2 id="history-title">Jejak kehadiranmu</h2>
-			<p class="muted">Riwayat {expanded ? '31 presensi terakhir' : 'presensi terbaru'}.</p>
+			<h2 id="history-title">{t('Jejak kehadiranmu')}</h2>
+			<p class="muted">
+				{t(expanded ? 'Riwayat 31 presensi terakhir.' : 'Riwayat presensi terbaru.')}
+			</p>
 		</div>
 		{#if days.length > 5}<button
 				type="button"
 				class="text-button"
 				onclick={() => (expanded = !expanded)}
-				>{expanded ? 'Ringkas' : 'Lihat semua'} <Icon name="arrow" size={15} /></button
+				>{expanded ? t('Ringkas') : t('Lihat semua')} <Icon name="arrow" size={15} /></button
 			>{/if}
 	</div>
 	{#if loading}<LoadingSkeleton
 			variant="history"
-			label="Mengambil riwayat presensi…"
+			label={t('Mengambil riwayat presensi…')}
 		/>{:else if !days.length}<div class="empty-history">
 			<div class="empty-icon"><Icon name="calendar" size={26} /></div>
-			<strong>Setiap perjalanan punya awal.</strong>
-			<p>Presensi pertamamu akan muncul di sini.<br />Mulai dengan mencatat kehadiran hari ini.</p>
+			<strong>{t('Setiap perjalanan punya awal.')}</strong>
+			<p>
+				{t('Presensi pertamamu akan muncul di sini.')}<br />{t(
+					'Mulai dengan mencatat kehadiran hari ini.'
+				)}
+			</p>
 		</div>{:else}<div class="table-scroll">
 			<table>
 				<thead
 					><tr
-						><th>Tanggal</th><th>Masuk</th><th>Pulang</th><th>Durasi</th><th>Status</th><th>Foto</th
-						></tr
+						><th>{t('Tanggal')}</th><th>{t('Masuk')}</th><th>{t('Pulang')}</th><th>{t('Durasi')}</th
+						><th>{t('Status')}</th><th>{t('Foto')}</th></tr
 					></thead
 				><tbody
 					>{#each shownDays as day (day.id)}<tr
 							><td
 								><strong
-									>{formatDate(dateFromKey(day.dateKey), {
-										weekday: undefined,
-										month: 'short',
-										year: undefined
-									})}</strong
-								><small>{WORK_MODES[day.checkIn.mode]}</small></td
-							><td>{formatTime(day.checkIn.timestamp?.toDate())}</td><td
-								>{formatTime(day.checkOut?.timestamp?.toDate())}</td
+									>{formatDate(
+										dateFromKey(day.dateKey),
+										{
+											weekday: undefined,
+											month: 'short',
+											year: undefined
+										},
+										preferences.locale
+									)}</strong
+								><small>{t(WORK_MODES[day.checkIn.mode])}</small></td
+							><td>{formatTime(day.checkIn.timestamp?.toDate(), preferences.locale)}</td><td
+								>{formatTime(day.checkOut?.timestamp?.toDate(), preferences.locale)}</td
 							><td
 								>{durationLabel(
 									day.checkIn.timestamp?.toDate(),
-									day.checkOut?.timestamp?.toDate()
+									day.checkOut?.timestamp?.toDate(),
+									preferences.locale
 								)}</td
 							><td
 								><span class={['badge', { complete: day.checkOut }]}
-									>{day.checkOut ? 'Lengkap' : 'Sudah masuk'}</span
+									>{day.checkOut ? t('Lengkap') : t('Sudah masuk')}</span
 								></td
 							><td
 								><div class="photo-actions">
 									<button
 										type="button"
 										class="icon-button"
-										aria-label={`Lihat foto masuk ${day.dateKey}`}
-										title="Foto masuk"
+										aria-label={t('Lihat foto masuk {date}', { date: day.dateKey })}
+										title={t('Foto masuk')}
 										onclick={() => openPhoto(day, 'checkIn')}
 										><Icon name="image" size={16} /></button
 									>{#if day.checkOut}<button
 											type="button"
 											class="icon-button"
-											aria-label={`Lihat foto pulang ${day.dateKey}`}
-											title="Foto pulang"
+											aria-label={t('Lihat foto pulang {date}', { date: day.dateKey })}
+											title={t('Foto pulang')}
 											onclick={() => openPhoto(day, 'checkOut')}
 											><Icon name="image" size={16} /></button
 										>{/if}
@@ -108,10 +127,10 @@
 						>{#if day.checkIn.note || day.checkOut?.note}<tr class="note-row"
 								><td colspan="6"
 									>{#if day.checkIn.note}<p>
-											<strong>Masuk:</strong>
+											<strong>{t('Masuk')}:</strong>
 											{day.checkIn.note}
 										</p>{/if}{#if day.checkOut?.note}<p>
-											<strong>Pulang:</strong>
+											<strong>{t('Pulang')}:</strong>
 											{day.checkOut.note}
 										</p>{/if}</td
 								></tr
@@ -127,15 +146,15 @@
 		<button
 			type="button"
 			class="icon-button"
-			aria-label="Tutup foto"
+			aria-label={t('Tutup foto')}
 			onclick={() => photoDialog.close()}><Icon name="close" /></button
 		>
 	</div>
-	{#if busy}<LoadingSkeleton variant="photo" label="Mengambil foto…" />{:else if error}<p
+	{#if busy}<LoadingSkeleton variant="photo" label={t('Mengambil foto…')} />{:else if error}<p
 			class="notice error"
 			role="alert"
 		>
-			{error}
+			{t(error)}
 		</p>{:else if photo}<img src={photo} alt={photoLabel} />{/if}
 </dialog>
 
