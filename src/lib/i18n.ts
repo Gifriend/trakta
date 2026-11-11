@@ -3,6 +3,9 @@ export type Locale = 'id' | 'en';
 const english: Record<string, string> = {
 	Tema: 'Theme',
 	Bahasa: 'Language',
+	'Efek kamera': 'Camera effect',
+	Terang: 'Bright',
+	'Hitam putih': 'Black and white',
 	'Langsung ke konten': 'Skip to content',
 	'Catat presensi masuk dan pulang, lengkapi dengan foto, dan simpan jejak kehadiran harianmu dengan Trakta.':
 		'Check in and out with a photo and track your daily attendance with Trakta.',

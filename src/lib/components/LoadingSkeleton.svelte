@@ -80,6 +80,6 @@
 		height: 44px;
 	}
 	.panel {
-		min-height: 180px;
+		min-height: var(--skeleton-panel-height, 180px);
 	}
 </style>

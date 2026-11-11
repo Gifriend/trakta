@@ -2,7 +2,9 @@
 	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount, tick } from 'svelte';
 	import type { CompressedPhoto } from '#lib/types/attendance.ts';
+	import { CAMERA_EFFECTS, drawCameraFrame, type CameraEffect } from '#lib/utils/camera.ts';
 	import Icon from './Icon.svelte';
+	import LoadingSkeleton from './LoadingSkeleton.svelte';
 
 	let {
 		photo,
@@ -22,6 +24,7 @@
 	let cameraError = $state('');
 	let frameReady = $state(false);
 	let taking = $state(false);
+	let effect = $state<CameraEffect>('natural');
 	let video = $state<HTMLVideoElement>();
 	let fileInput: HTMLInputElement;
 	let stream: MediaStream | undefined;
@@ -104,7 +107,7 @@
 			canvas.height = video.videoHeight;
 			const context = canvas.getContext('2d');
 			if (!context) throw new Error('Canvas unavailable');
-			context.drawImage(video, 0, 0);
+			drawCameraFrame(context, video, effect);
 			const blob = await new Promise<Blob>((resolve, reject) => {
 				canvas.toBlob(
 					(value) => (value ? resolve(value) : reject(new Error('Capture failed'))),
@@ -172,6 +175,7 @@
 				autoplay
 				playsinline
 				muted
+				style:filter={CAMERA_EFFECTS[effect].filter}
 				aria-label={t('Pratinjau kamera presensi')}
 				onloadeddata={(event) => {
 					frameReady = event.currentTarget.videoWidth > 0 && event.currentTarget.videoHeight > 0;
@@ -183,10 +187,12 @@
 				aria-label={t('Tutup kamera')}
 				onclick={stopCamera}><Icon name="close" /></button
 			>
-			{#if cameraState === 'starting'}<div class="camera-loading" role="status">
-					<span class="spinner"></span><span
-						>{t('Membuka kamera… Izinkan akses jika diminta.')}</span
-					>
+			{#if cameraState === 'starting'}<div class="camera-loading">
+					<LoadingSkeleton
+						variant="photo"
+						label={t('Membuka kamera… Izinkan akses jika diminta.')}
+					/>
+					<span aria-hidden="true">{t('Membuka kamera… Izinkan akses jika diminta.')}</span>
 				</div>{/if}
 			<button
 				type="button"
@@ -213,6 +219,21 @@
 			<p>{t('Ambil foto langsung atau pilih dari perangkatmu.')}</p>
 		{/if}
 	</div>
+	{#if cameraState === 'live'}
+		<div class="camera-effect">
+			<label for="camera-effect">{t('Efek kamera')}</label>
+			<select
+				id="camera-effect"
+				value={effect}
+				disabled={disabled || taking}
+				onchange={(event) => (effect = event.currentTarget.value as CameraEffect)}
+			>
+				{#each Object.entries(CAMERA_EFFECTS) as [value, setting] (value)}
+					<option {value}>{t(setting.label)}</option>
+				{/each}
+			</select>
+		</div>
+	{/if}
 	<div class="source-options">
 		<button
 			type="button"
@@ -306,6 +327,7 @@
 		width: 100%;
 		height: 300px;
 		object-fit: contain;
+		transform: none;
 	}
 	.close-camera {
 		position: absolute;
@@ -320,6 +342,8 @@
 		color: white;
 	}
 	.camera-loading {
+		--skeleton-fill: #52635d;
+		--skeleton-panel-height: 105px;
 		position: absolute;
 		inset: 60px 20px 80px;
 		display: flex;
@@ -333,8 +357,25 @@
 		line-height: 1.6;
 		pointer-events: none;
 	}
-	.camera-loading .spinner {
-		border-top-color: var(--lime);
+	.camera-effect {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin: 10px 0 0;
+	}
+	.camera-effect select {
+		min-height: 44px;
+		border: 1px solid var(--control-border);
+		border-radius: var(--control-radius);
+		background: var(--surface);
+		color: var(--ink);
+		padding: 8px;
+		font-size: 13px;
+	}
+	.camera-effect label {
+		margin: 0;
 	}
 	.shutter {
 		position: absolute;

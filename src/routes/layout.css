@@ -260,15 +260,6 @@ h2 {
 	border-color: #ccdfd2;
 	color: var(--primary);
 }
-.spinner {
-	width: 24px;
-	height: 24px;
-	border: 2px solid var(--border);
-	border-top-color: var(--primary);
-	border-radius: 50%;
-	display: inline-block;
-	animation: spin 800ms linear infinite;
-}
 .skeleton {
 	background: var(--skeleton-fill, #e5ece8);
 	border-radius: var(--skeleton-radius, 8px);
@@ -291,11 +282,6 @@ h2 {
 }
 .skip-link:focus {
 	top: 15px;
-}
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
 }
 @media (prefers-reduced-motion: reduce) {
 	*,
