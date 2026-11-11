@@ -1,0 +1,266 @@
+:root:is([data-theme='glass'], [data-theme='clay'], [data-theme='swiss'], [data-theme='deco']) {
+	--avatar-surface: var(--primary-soft);
+	--control-hover: var(--ring);
+	--placeholder: var(--muted);
+	--tip-surface: var(--primary-soft);
+	--tip-border: var(--border);
+	--tip-ink: var(--muted);
+	--tip-rule: var(--primary);
+}
+
+:root[data-theme='glass']:not([data-mode='dark']) {
+	--ink: #172342;
+	--muted: #44547c;
+	--primary: #3445a6;
+	--primary-hover: #293583;
+	--primary-soft: #e2e7ff;
+	--forest: #273766;
+	--lime: #c9dbff;
+	--surface: #f8faff;
+	--background: #e5ecff;
+	--subtle: #eff3ff;
+	--border: #bdc9e6;
+	--control-border: #9eaed4;
+	--ring: #475cc6;
+	--skeleton-fill: #dbe4fa;
+	--glass-panel: #f8faffd9;
+	--glass-glow-top: #bfcef9;
+	--glass-glow-bottom: #e3ccf9;
+	--glass-shadow: #30477323;
+}
+
+:root[data-theme='glass'][data-mode='dark'] {
+	--ink: #edf1ff;
+	--muted: #b6c1e4;
+	--primary: #b8c4ff;
+	--on-primary: #17244b;
+	--primary-hover: #dae0ff;
+	--primary-soft: #303e69;
+	--forest: #293660;
+	--lime: #c9dbff;
+	--surface: #212b4b;
+	--background: #10162d;
+	--subtle: #273354;
+	--border: #6375a0;
+	--control-border: #7889b2;
+	--ring: #bcc9ff;
+	--skeleton-fill: #45547c;
+	--glass-panel: #212b4bd9;
+	--glass-glow-top: #233961;
+	--glass-glow-bottom: #342653;
+	--glass-shadow: #060b1e58;
+}
+
+:root[data-theme='glass'] {
+	background-image:
+		radial-gradient(ellipse at 8% 2%, var(--glass-glow-top), transparent 55%),
+		radial-gradient(ellipse at 98% 45%, var(--glass-glow-bottom), transparent 60%);
+	--control-radius: 12px;
+}
+
+:root[data-theme='glass'] :is(.auth-main, .card, .topbar, .sidebar, .photo-dialog) {
+	background: var(--glass-panel);
+	backdrop-filter: blur(14px);
+}
+
+:root[data-theme='glass'] :is(.card, .today-card, .tip-card, .photo-dialog) {
+	border: 1px solid var(--border);
+	border-radius: 19px;
+	box-shadow: 0 8px 25px var(--glass-shadow);
+}
+
+:root[data-theme='glass'] :is(.auth-story, .today-card) {
+	background: linear-gradient(145deg, var(--forest), #26234d);
+}
+
+:root[data-theme='clay']:not([data-mode='dark']) {
+	--ink: #352538;
+	--muted: #655065;
+	--primary: #963b56;
+	--primary-hover: #742842;
+	--primary-soft: #f9dce6;
+	--forest: #664059;
+	--lime: #ffdfbd;
+	--surface: #fff8f5;
+	--background: #f6e9ec;
+	--subtle: #f9edea;
+	--border: #e6c6cf;
+	--control-border: #c9a1af;
+	--ring: #9f3b61;
+	--skeleton-fill: #edced8;
+	--clay-highlight: #ffffffd1;
+	--clay-shadow: #63395129;
+}
+
+:root[data-theme='clay'][data-mode='dark'] {
+	--ink: #f5e9f3;
+	--muted: #cdb9cc;
+	--primary: #ffabc5;
+	--on-primary: #442137;
+	--primary-hover: #ffc9d9;
+	--primary-soft: #513249;
+	--forest: #51334d;
+	--lime: #ffdfbd;
+	--surface: #352738;
+	--background: #211925;
+	--subtle: #403044;
+	--border: #674d63;
+	--control-border: #9c8198;
+	--ring: #ffc1d4;
+	--skeleton-fill: #604860;
+	--clay-highlight: #e4bed522;
+	--clay-shadow: #100814a0;
+}
+
+:root[data-theme='clay'] {
+	--control-radius: 15px;
+}
+
+:root[data-theme='clay'] :is(.card, .today-card, .tip-card, .photo-dialog) {
+	border-radius: 24px;
+	box-shadow:
+		inset 0 2px 3px var(--clay-highlight),
+		inset 0 -4px 6px var(--clay-shadow),
+		0 9px 18px var(--clay-shadow);
+}
+
+:root[data-theme='clay'] :is(.button, .brand-mark, .stat-icon, .photo-frame, .mode-options label) {
+	border-radius: var(--control-radius);
+	box-shadow:
+		inset 0 1px 2px var(--clay-highlight),
+		0 3px 6px var(--clay-shadow);
+}
+
+:root[data-theme='clay'] .auth-main {
+	background: var(--background);
+}
+
+:root[data-theme='swiss']:not([data-mode='dark']) {
+	--ink: #171717;
+	--muted: #50504c;
+	--primary: #ba281b;
+	--primary-hover: #931e14;
+	--primary-soft: #f9e5e1;
+	--forest: #202020;
+	--lime: #f4eee5;
+	--surface: #fff;
+	--background: #f6f6f3;
+	--subtle: #f2f2ee;
+	--border: #c6c6c0;
+	--control-border: #92928d;
+	--ring: #ba281b;
+	--skeleton-fill: #dededa;
+}
+
+:root[data-theme='swiss'][data-mode='dark'] {
+	--ink: #f4f4f1;
+	--muted: #bcbcb6;
+	--primary: #ff927e;
+	--on-primary: #2e100b;
+	--primary-hover: #ffb5a8;
+	--primary-soft: #492b26;
+	--forest: #272727;
+	--lime: #f4eee5;
+	--surface: #1e1e1e;
+	--background: #141414;
+	--subtle: #282828;
+	--border: #51514e;
+	--control-border: #868681;
+	--ring: #ff927e;
+	--skeleton-fill: #3b3b38;
+}
+
+:root[data-theme='swiss'] {
+	--control-radius: 0;
+	--skeleton-radius: 0;
+}
+
+:root[data-theme='swiss'] :is(.card, .today-card, .tip-card, .photo-dialog) {
+	border: 1px solid var(--border);
+	border-top: 2px solid var(--ink);
+	border-radius: 0;
+	box-shadow: none;
+}
+
+:root[data-theme='swiss'] :is(h1, h2) {
+	font-weight: 750;
+	letter-spacing: -0.035em;
+}
+
+:root[data-theme='swiss'] .auth-story {
+	border-inline-start: 6px solid var(--primary);
+}
+
+:root[data-theme='deco']:not([data-mode='dark']) {
+	--ink: #32281b;
+	--muted: #64523b;
+	--primary: #75521f;
+	--primary-hover: #5c3e15;
+	--primary-soft: #f1e3c4;
+	--forest: #28231d;
+	--lime: #e8c67c;
+	--surface: #fffbef;
+	--background: #efe8d8;
+	--subtle: #f7eedb;
+	--border: #b89962;
+	--control-border: #a48654;
+	--ring: #886026;
+	--skeleton-fill: #e7d9bb;
+}
+
+:root[data-theme='deco'][data-mode='dark'] {
+	--ink: #f6e9ce;
+	--muted: #c8b799;
+	--primary: #e8c67c;
+	--on-primary: #302213;
+	--primary-hover: #f3dda5;
+	--primary-soft: #463925;
+	--forest: #2e281e;
+	--lime: #e8c67c;
+	--surface: #25211b;
+	--background: #161513;
+	--subtle: #31291e;
+	--border: #8a7046;
+	--control-border: #a48b64;
+	--ring: #e8c67c;
+	--skeleton-fill: #504332;
+}
+
+:root[data-theme='deco'] {
+	--control-radius: 2px;
+	--skeleton-radius: 2px;
+}
+
+:root[data-theme='deco'] :is(.card, .today-card, .tip-card, .photo-dialog) {
+	border: 3px double var(--border);
+	border-radius: 2px;
+	box-shadow: none;
+}
+
+:root[data-theme='deco'] :is(h1, h2) {
+	font-family: 'Cormorant Garamond', Georgia, serif;
+	font-weight: 700;
+	letter-spacing: -0.015em;
+}
+
+:root[data-theme='deco'] .auth-story {
+	background-image:
+		repeating-linear-gradient(135deg, #e8c67c18 0 1px, transparent 1px 14px),
+		linear-gradient(var(--forest), var(--forest));
+	background-position: right bottom;
+	background-size:
+		35% 30%,
+		100% 100%;
+	background-repeat: no-repeat;
+	border-inline-end: 4px double var(--lime);
+}
+
+:root:is([data-theme='glass'], [data-theme='clay'], [data-theme='swiss'], [data-theme='deco'])
+	:is(.button, input:not([type='radio'], [type='checkbox']), textarea) {
+	border-radius: var(--control-radius);
+}
+
+:root:is([data-theme='swiss'], [data-theme='deco'])
+	:is(.brand-mark, .nav-link, .stat-icon, .photo-frame, .mode-options label, .date-label) {
+	border-radius: var(--control-radius);
+}

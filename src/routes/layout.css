@@ -43,23 +43,27 @@
 	--tip-rule: #c2c9aa;
 }
 :root[data-theme='neo'] {
-	--ink: #211c29;
-	--muted: #52495b;
-	--primary: #4932a6;
-	--primary-hover: #34227d;
-	--primary-soft: #ded3ff;
-	--forest: #28213d;
-	--lime: #ffdf66;
+	--ink: #1b2037;
+	--muted: #4d5673;
+	--primary: #2838bc;
+	--primary-hover: #19288f;
+	--primary-soft: #dce1ff;
+	--forest: #252d60;
+	--lime: #dcf768;
+	--lime-hover: #c9e842;
 	--surface: #fffefa;
-	--background: #fff3d5;
-	--subtle: #fff6dc;
-	--border: #211c29;
-	--ring: #5b3dc7;
+	--background: #eef0ff;
+	--subtle: #f3f4ff;
+	--border: var(--ink);
+	--ring: #3649d2;
 	--control-border: var(--ink);
 	--control-radius: 2px;
-	--skeleton-fill: #dccdf0;
+	--skeleton-fill: #d6dcf9;
 	--skeleton-radius: 2px;
-	--tip-surface: #ffd4e8;
+	--avatar-surface: var(--primary-soft);
+	--tip-surface: #ffdbbe;
+	--tip-ink: #624530;
+	--tip-rule: #9b6347;
 }
 :root[data-mode='dark'] {
 	color-scheme: dark;
@@ -97,23 +101,23 @@
 	--tip-rule: #829478;
 }
 :root[data-theme='neo'][data-mode='dark'] {
-	--ink: #f4eafa;
-	--muted: #c1b1cc;
-	--primary: #d4b8ff;
-	--on-primary: #21172e;
-	--primary-hover: #ebd9ff;
-	--primary-soft: #40304f;
-	--forest: #352849;
-	--surface: #261e30;
-	--background: #1a1422;
-	--subtle: #30263b;
-	--border: #695872;
-	--ring: #e1b9ff;
-	--control-border: #9d86ab;
-	--skeleton-fill: #50415c;
-	--tip-surface: #492b43;
-	--tip-ink: #e4c7e1;
-	--tip-rule: #c38ab9;
+	--ink: #eef0ff;
+	--muted: #bac1da;
+	--primary: #bbc4ff;
+	--on-primary: #1b2037;
+	--primary-hover: #dbe0ff;
+	--primary-soft: #383f6b;
+	--forest: #303866;
+	--surface: #232943;
+	--background: #181c31;
+	--subtle: #2b3151;
+	--border: #677097;
+	--ring: #c8d0ff;
+	--control-border: #929cc6;
+	--skeleton-fill: #444d75;
+	--tip-surface: #503629;
+	--tip-ink: #ffd6b9;
+	--tip-rule: #e5a886;
 }
 :root[data-theme='neo'] :is(.card, .today-card, .tip-card, .install-card, .photo-dialog) {
 	border: 2px solid var(--ink);
@@ -132,10 +136,10 @@
 }
 :root[data-theme='neo'] .button.primary {
 	background: var(--lime);
-	color: #211c29;
+	color: #1b2037;
 }
 :root[data-theme='neo'] .button.primary:hover:not(:disabled) {
-	background: #ffcc32;
+	background: var(--lime-hover);
 }
 :root[data-theme='neo'] :is(input:not([type='radio']), textarea, select) {
 	border-width: 2px;

@@ -6,9 +6,8 @@
 		<meta name="text-scale" content="scale" />
 		<script>
 			try {
-				if (localStorage.getItem('trakta.theme') === 'neo') {
-					document.documentElement.dataset.theme = 'neo';
-				}
+				const savedTheme = localStorage.getItem('trakta.theme');
+				if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 				if (localStorage.getItem('trakta.mode') === 'dark') {
 					document.documentElement.dataset.mode = 'dark';
 				}

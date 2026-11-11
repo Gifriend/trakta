@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getPreferences, type DisplayMode, type Theme } from '#lib/preferences.ts';
+	import { getPreferences, isTheme, THEMES, type DisplayMode } from '#lib/preferences.ts';
 	import type { Locale } from '#lib/i18n.ts';
 
 	const preferences = getPreferences();
@@ -12,10 +12,14 @@
 		<select
 			id="trakta-theme"
 			value={preferences.theme}
-			onchange={(event) => preferences.setTheme(event.currentTarget.value as Theme)}
+			onchange={(event) => {
+				const theme = event.currentTarget.value;
+				if (isTheme(theme)) preferences.setTheme(theme);
+			}}
 		>
-			<option value="classic">Trakta</option>
-			<option value="neo">Neobrutalism</option>
+			{#each Object.entries(THEMES) as [value, theme] (value)}
+				<option {value}>{theme.label}</option>
+			{/each}
 		</select>
 	</div>
 	<div class="preference-control">
