@@ -53,11 +53,37 @@ try {
 	assert.equal(await page.getByLabel('Appearance', { exact: true }).inputValue(), 'dark');
 	assert.equal(
 		await page.locator('html').evaluate((root) => getComputedStyle(root).backgroundColor),
-		'rgb(26, 20, 34)'
+		'rgb(24, 28, 49)'
 	);
 	await page.getByLabel('Appearance', { exact: true }).selectOption('light');
 	assert.equal(await page.locator('html').getAttribute('data-theme'), 'neo');
 	assert.equal(await page.locator('html').getAttribute('data-mode'), 'light');
+	const themePicker = page.getByLabel('Theme', { exact: true });
+	const appearance = page.getByLabel('Appearance', { exact: true });
+	for (const [theme, light, dark] of [
+		['glass', 'rgb(229, 236, 255)', 'rgb(16, 22, 45)'],
+		['clay', 'rgb(246, 233, 236)', 'rgb(33, 25, 37)'],
+		['swiss', 'rgb(246, 246, 243)', 'rgb(20, 20, 20)'],
+		['deco', 'rgb(239, 232, 216)', 'rgb(22, 21, 19)']
+	]) {
+		await themePicker.selectOption(theme);
+		for (const [mode, color] of [
+			['light', light],
+			['dark', dark]
+		]) {
+			await appearance.selectOption(mode);
+			assert.equal(
+				await page.locator('html').evaluate((root) => getComputedStyle(root).backgroundColor),
+				color
+			);
+		}
+	}
+	await page.reload();
+	await page.getByRole('heading', { name: 'Welcome back.' }).waitFor();
+	assert.equal(await themePicker.inputValue(), 'deco');
+	assert.equal(await appearance.inputValue(), 'dark');
+	assert.equal(await page.locator('meta[name="theme-color"]').getAttribute('content'), '#161513');
+	await appearance.selectOption('light');
 	await page.getByLabel('Language', { exact: true }).selectOption('id');
 	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
 	await page.screenshot({ path: 'test-results/login-desktop.png', fullPage: true });
@@ -108,7 +134,20 @@ try {
 	await page.getByLabel('Tema', { exact: true }).selectOption('neo');
 	await page.getByLabel('Bahasa', { exact: true }).selectOption('en');
 	await page.getByRole('heading', { name: 'Check in', exact: true }).waitFor();
-	await page.getByLabel('Camera effect', { exact: true }).selectOption('mono');
+	const cameraEffect = page.getByLabel('Camera effect', { exact: true });
+	for (const [label, filter] of [
+		['Sepia', 'sepia(1)'],
+		['Vivid', 'saturate(1.45)'],
+		['High contrast', 'contrast(1.3)'],
+		['Soft', 'contrast(0.8)']
+	]) {
+		await cameraEffect.selectOption({ label });
+		assert.equal(
+			await page.locator('video').evaluate((video) => getComputedStyle(video).filter),
+			filter
+		);
+	}
+	await cameraEffect.selectOption('mono');
 	assert.equal(
 		await page.locator('video').evaluate((video) => getComputedStyle(video).transform),
 		'none'
@@ -125,6 +164,19 @@ try {
 		true
 	);
 	await page.screenshot({ path: 'test-results/trakta-neo-dark-en-mobile.png', fullPage: true });
+	await appearance.selectOption('light');
+	for (const theme of ['glass', 'clay', 'swiss', 'deco']) {
+		await themePicker.selectOption(theme);
+		assert.equal(
+			await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+			true,
+			`${theme} fits on a phone screen`
+		);
+		await page.screenshot({
+			path: `test-results/trakta-${theme}-light-mobile.png`,
+			fullPage: true
+		});
+	}
 	await page.setViewportSize({ width: 1440, height: 1100 });
 	await page.getByLabel('Language', { exact: true }).selectOption('id');
 	await page.getByLabel('Tema', { exact: true }).selectOption('classic');
@@ -173,7 +225,7 @@ try {
 		await page.locator('video').evaluate((video) => getComputedStyle(video).transform),
 		'matrix(-1, 0, 0, 1, 0, 0)'
 	);
-	await page.getByLabel('Efek kamera', { exact: true }).selectOption('natural');
+	await page.getByLabel('Efek kamera', { exact: true }).selectOption('sepia');
 	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
 	await page.waitForFunction((previousSrc) => {
 		const photo = document.querySelector('img[alt="Pratinjau foto presensi yang akan dikirim"]');
@@ -184,7 +236,7 @@ try {
 		correctedLeft[0] > correctedRight[0] + 80,
 		'the camera correction restores the bright side to the left in the saved photo'
 	);
-	assert.ok(correctedRight[2] > correctedRight[0] + 80, 'the new photo uses the natural effect');
+	assert.ok(correctedRight[0] > correctedRight[2] + 12, 'the corrected photo uses sepia');
 	await page.evaluate(() => {
 		navigator.mediaDevices.getUserMedia = window.__realCamera;
 	});
