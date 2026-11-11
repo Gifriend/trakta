@@ -2,13 +2,15 @@ import {
 	collection,
 	doc,
 	getDocFromServer,
+	getDocsFromServer,
 	limit,
 	onSnapshot,
 	orderBy,
 	query,
 	runTransaction,
 	serverTimestamp,
-	type FirestoreError
+	type FirestoreError,
+	type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { getFirebase } from './client';
 import { getDatabase } from './database';
@@ -21,21 +23,36 @@ import type {
 import { dateKey } from '#lib/utils/date.ts';
 import { MAX_PHOTO_BYTES } from '#lib/utils/image.ts';
 
+function attendanceQuery(uid: string) {
+	return query(collection(getDatabase(), 'users', uid, 'attendance'), orderBy('dateKey', 'desc'));
+}
+
+function attendanceDay(entry: QueryDocumentSnapshot): AttendanceDay {
+	return { ...entry.data(), id: entry.id } as AttendanceDay;
+}
+
 export function watchAttendance(
 	uid: string,
 	onData: (days: AttendanceDay[]) => void,
 	onError: (error: FirestoreError) => void
 ) {
-	const db = getDatabase();
 	return onSnapshot(
-		query(collection(db, 'users', uid, 'attendance'), orderBy('dateKey', 'desc'), limit(31)),
+		query(attendanceQuery(uid), limit(31)),
 		(snapshot) => {
 			if (!snapshot.metadata.hasPendingWrites) {
-				onData(snapshot.docs.map((entry) => ({ ...entry.data(), id: entry.id }) as AttendanceDay));
+				onData(snapshot.docs.map(attendanceDay));
 			}
 		},
 		onError
 	);
+}
+
+export async function loadAttendanceForExport(uid: string): Promise<AttendanceDay[]> {
+	const { auth } = getFirebase();
+	if (auth.currentUser?.uid !== uid) throw new Error('Sesi berakhir. Silakan masuk kembali.');
+	const snapshot = await getDocsFromServer(attendanceQuery(uid));
+	if (auth.currentUser?.uid !== uid) throw new Error('Sesi berakhir. Silakan masuk kembali.');
+	return snapshot.docs.map(attendanceDay);
 }
 
 export async function submitAttendance(input: {

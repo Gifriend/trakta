@@ -3,7 +3,7 @@
 	import type { AttendanceDay, AttendanceKind } from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
 	import { dateFromKey, formatDate, formatTime, durationLabel } from '#lib/utils/date.ts';
-	import { loadPhoto } from '#lib/firebase/attendance.ts';
+	import { loadAttendanceForExport, loadPhoto } from '#lib/firebase/attendance.ts';
 	import { friendlyError } from '#lib/firebase/auth.ts';
 	import Icon from './Icon.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
@@ -13,9 +13,33 @@
 	let selectedPhoto = $state<{ dateKey: string; kind: AttendanceKind }>();
 	let busy = $state(false);
 	let error = $state('');
+	let exporting = $state(false);
+	let exportError = $state('');
 	let photoDialog: HTMLDialogElement;
 	let activeRequest = 0;
 	let shownDays = $derived(expanded ? days : days.slice(0, 5));
+	async function exportExcel() {
+		if (exporting || !days.length) return;
+		exportError = '';
+		if (!navigator.onLine) {
+			exportError = 'Hubungkan internet untuk mengunduh seluruh riwayat presensi.';
+			return;
+		}
+		exporting = true;
+		const { locale } = preferences;
+		try {
+			const [{ downloadAttendanceWorkbook }, records] = await Promise.all([
+				import('#lib/utils/attendance-excel.ts'),
+				loadAttendanceForExport(uid)
+			]);
+			if (records.length) await downloadAttendanceWorkbook(records, locale);
+			else exportError = 'Belum ada data presensi untuk diekspor.';
+		} catch {
+			exportError = 'Ekspor Excel gagal. Periksa koneksi lalu coba lagi.';
+		} finally {
+			exporting = false;
+		}
+	}
 	async function openPhoto(day: AttendanceDay, kind: AttendanceKind) {
 		const version = ++activeRequest;
 		busy = true;
@@ -54,13 +78,28 @@
 				{t(expanded ? 'Riwayat 31 presensi terakhir.' : 'Riwayat presensi terbaru.')}
 			</p>
 		</div>
-		{#if days.length > 5}<button
-				type="button"
-				class="text-button"
-				onclick={() => (expanded = !expanded)}
-				>{expanded ? t('Ringkas') : t('Lihat semua')} <Icon name="arrow" size={15} /></button
-			>{/if}
+		{#if !loading && days.length}
+			<div class="history-actions">
+				{#if days.length > 5}
+					<button type="button" class="text-button" onclick={() => (expanded = !expanded)}>
+						{expanded ? t('Ringkas') : t('Lihat semua')}
+						<Icon name="arrow" size={15} />
+					</button>
+				{/if}
+				<button
+					type="button"
+					class="button secondary"
+					disabled={exporting}
+					aria-busy={exporting}
+					onclick={exportExcel}
+				>
+					<Icon name="download" size={16} />
+					{exporting ? t('Menyiapkan Excel…') : t('Ekspor Excel')}
+				</button>
+			</div>
+		{/if}
 	</div>
+	{#if exportError}<p class="notice error export-error" role="alert">{t(exportError)}</p>{/if}
 	{#if loading}<LoadingSkeleton
 			variant="history"
 			label={t('Mengambil riwayat presensi…')}
@@ -165,7 +204,17 @@
 	}
 	.history-heading {
 		padding: 25px 27px;
-		gap: 15px;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+	.history-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 14px;
+	}
+	.export-error {
+		margin: 0 27px 16px;
 	}
 	h2 {
 		font-size: 18px;
