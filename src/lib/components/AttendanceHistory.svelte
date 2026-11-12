@@ -271,7 +271,7 @@
 		<div class="export-ready">
 			<p role="status">{t('File Excel siap disimpan.')}</p>
 			<div class="history-actions">
-				<a class="button primary" href={workbook.url} download={workbook.file.name}>
+				<a class="button primary" href={workbook.url} download={workbook.file.name} rel="external">
 					<Icon name="download" size={16} />{t('Unduh Excel')}
 				</a>
 				{#if workbook.canShare}

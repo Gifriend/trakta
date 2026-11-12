@@ -171,7 +171,10 @@ try {
 		['Sepia', 'sepia(1)'],
 		['Vivid', 'saturate(1.45)'],
 		['High contrast', 'contrast(1.3)'],
-		['Soft', 'contrast(0.8)']
+		['Soft', 'contrast(0.8)'],
+		['Low light', 'brightness(1.4)'],
+		['Muted colors', 'saturate(0.55)'],
+		['Negative', 'invert(1)']
 	]) {
 		await cameraEffect.selectOption({ label });
 		assert.equal(
@@ -197,7 +200,12 @@ try {
 	);
 	await page.screenshot({ path: 'test-results/trakta-neo-dark-en-mobile.png', fullPage: true });
 	assert.equal(await appearance.count(), 0);
-	assert.equal(await cameraEffect.count(), 0);
+	assert.equal(await cameraEffect.count(), 1);
+	await cameraEffect.selectOption('lowLight');
+	assert.equal(
+		await page.locator('video').evaluate((video) => getComputedStyle(video).filter),
+		'brightness(1.4)'
+	);
 	await page.evaluate(() => window.scrollTo(0, 420));
 	assert.ok(await page.evaluate(() => window.scrollY > 0));
 	assert.equal(
@@ -205,7 +213,9 @@ try {
 		0
 	);
 	await settingsButton('Settings').click();
-	await cameraEffect.selectOption('soft');
+	await settings('Settings')
+		.getByRole('combobox', { name: 'Camera effect', exact: true })
+		.selectOption('soft');
 	await page.screenshot({ path: 'test-results/settings-mobile.png' });
 	await page.keyboard.press('Escape');
 	await settings('Settings').waitFor({ state: 'hidden' });
@@ -218,7 +228,9 @@ try {
 		'contrast(0.8)'
 	);
 	await settingsButton('Settings').click();
-	await cameraEffect.selectOption('mono');
+	await settings('Settings')
+		.getByRole('combobox', { name: 'Camera effect', exact: true })
+		.selectOption('mono');
 	await appearance.selectOption('light');
 	await settings('Settings').getByRole('link', { name: 'Attendance history' }).click();
 	await settings('Settings').waitFor({ state: 'hidden' });
@@ -477,9 +489,10 @@ try {
 	assert.equal(await next.isDisabled(), true);
 	await history.getByRole('button', { name: 'Hapus filter' }).click();
 	await history.getByText('Halaman 1', { exact: true }).waitFor();
+	await history.getByRole('button', { name: 'Ekspor Excel', exact: true }).click();
 	const [workbookDownload] = await Promise.all([
 		page.waitForEvent('download'),
-		page.getByRole('button', { name: 'Ekspor Excel', exact: true }).click()
+		history.getByRole('link', { name: 'Unduh Excel', exact: true }).click()
 	]);
 	assert.match(workbookDownload.suggestedFilename(), /^trakta-presensi-\d{8}\.xlsx$/);
 	const workbookPath = 'test-results/presensi-export.xlsx';
@@ -493,14 +506,44 @@ try {
 		.getAttribute('aria-label');
 	const dayKey = today.match(/\d{8}$/)[0];
 	const todayFilter = `${dayKey.slice(0, 4)}-${dayKey.slice(4, 6)}-${dayKey.slice(6, 8)}`;
+	await page.setViewportSize({ width: 375, height: 812 });
+	const filterFits = await history.locator('.date-filter').evaluate((form) => {
+		const [start, end] = Array.from(form.querySelectorAll('input'), (input) =>
+			input.getBoundingClientRect()
+		);
+		const boundary = form.getBoundingClientRect();
+		return (
+			start.left >= boundary.left &&
+			end.right <= boundary.right &&
+			(end.top - start.bottom >= 12 || end.left - start.right >= 12)
+		);
+	});
+	assert.ok(filterFits, 'mobile date fields stay inside the filter and have a visible gap');
 	await history.getByLabel('Tanggal mulai').fill(todayFilter);
 	await history.getByLabel('Tanggal sampai').fill(todayFilter);
 	await history.getByRole('button', { name: 'Filter tanggal', exact: true }).click();
 	await history.getByText(/^Periode /).waitFor();
+	assert.equal(await history.getByRole('link', { name: 'Unduh Excel', exact: true }).count(), 0);
+	await page.evaluate(() => {
+		window.createImageBitmap = undefined;
+		Object.defineProperties(navigator, {
+			canShare: { configurable: true, value: ({ files }) => files.length === 1 },
+			share: {
+				configurable: true,
+				value: async ({ files }) => {
+					window.__sharedWorkbook = {
+						name: files[0].name,
+						active: navigator.userActivation.isActive
+					};
+				}
+			}
+		});
+	});
 	await history.getByRole('checkbox', { name: 'Sertakan foto' }).check();
+	await history.getByRole('button', { name: 'Ekspor Excel', exact: true }).click();
 	const [photoWorkbook] = await Promise.all([
 		page.waitForEvent('download'),
-		history.getByRole('button', { name: 'Ekspor Excel', exact: true }).click()
+		history.getByRole('link', { name: 'Unduh Excel', exact: true }).click()
 	]);
 	assert.match(photoWorkbook.suggestedFilename(), /^trakta-presensi-\d{8}-foto\.xlsx$/);
 	const photoWorkbookPath = 'test-results/presensi-export-foto.xlsx';
@@ -508,11 +551,29 @@ try {
 	const photoFile = await readFile(photoWorkbookPath);
 	assert.ok(photoFile.includes(Buffer.from('xl/media/')));
 	assert.ok(photoFile.includes(Buffer.from('xl/drawings/drawing')));
-	await page.getByRole('button', { name: /Lihat foto masuk/ }).click();
-	await page.getByRole('dialog').getByRole('img').waitFor();
+	await history.getByRole('button', { name: 'Bagikan Excel', exact: true }).click();
+	assert.deepEqual(await page.evaluate(() => window.__sharedWorkbook), {
+		name: photoWorkbook.suggestedFilename(),
+		active: true
+	});
+	const checkInPhoto = history.getByRole('button', { name: /Lihat foto masuk/ });
+	await checkInPhoto.scrollIntoViewIfNeeded();
+	const thumbnail = checkInPhoto.locator('img');
+	await thumbnail.waitFor();
+	assert.ok(
+		await thumbnail.evaluate(async (image) => {
+			await image.decode();
+			return image.naturalWidth > 0;
+		})
+	);
+	const thumbnailSource = await thumbnail.getAttribute('src');
+	await checkInPhoto.click();
+	const fullPhoto = page.getByRole('dialog').getByRole('img');
+	await fullPhoto.waitFor();
+	assert.equal(await fullPhoto.getAttribute('src'), thumbnailSource);
 	await page.getByRole('button', { name: 'Tutup foto' }).click();
 	await page.keyboard.press('Tab');
-	await page.screenshot({ path: 'test-results/completed-desktop.png', fullPage: true });
+	await page.screenshot({ path: 'test-results/completed-mobile.png', fullPage: true });
 	await page.setViewportSize({ width: 375, height: 812 });
 	await settingsButton('Pengaturan').click();
 	await settings('Pengaturan').getByRole('button', { name: 'Keluar dari akun' }).click();
