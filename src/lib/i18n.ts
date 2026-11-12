@@ -2,6 +2,7 @@ export type Locale = 'id' | 'en';
 
 const english: Record<string, string> = {
 	'Buka fotobox': 'Open photo booth',
+	'Membuka fotobox…': 'Opening photo booth…',
 	Fotobox: 'Photo booth',
 	'Tutup fotobox': 'Close photo booth',
 	'Ambil beberapa pose, hias, lalu simpan ke perangkatmu.':

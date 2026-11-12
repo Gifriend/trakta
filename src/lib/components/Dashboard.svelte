@@ -14,8 +14,21 @@
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	import Preferences from './Preferences.svelte';
 	import MobileSettings from './MobileSettings.svelte';
-	import PhotoBooth from './PhotoBooth.svelte';
+	let PhotoBooth = $state<typeof import('./PhotoBooth.svelte').default>();
+	let boothLoading = $state(false);
 	let boothOpen = $state(false);
+	async function openBooth() {
+		attendanceForm?.pauseCamera();
+		boothLoading = true;
+		try {
+			PhotoBooth = (await import('./PhotoBooth.svelte')).default;
+			boothOpen = true;
+		} catch (cause) {
+			error = friendlyError(cause);
+		} finally {
+			boothLoading = false;
+		}
+	}
 
 	const preferences = getPreferences();
 	const { t } = preferences;
@@ -238,12 +251,11 @@
 				type="button"
 				class="button secondary booth-trigger"
 				aria-haspopup="dialog"
-				onclick={() => {
-					attendanceForm?.pauseCamera();
-					boothOpen = true;
-				}}
+				disabled={boothLoading}
+				aria-busy={boothLoading}
+				onclick={openBooth}
 			>
-				<Icon name="camera" size={18} />{t('Buka fotobox')}
+				<Icon name="camera" size={18} />{t(boothLoading ? 'Membuka fotobox…' : 'Buka fotobox')}
 			</button>
 			{#if loading}
 				<section class="card daily-panel">
@@ -377,7 +389,7 @@
 	</div>
 </div>
 
-{#if boothOpen}<PhotoBooth onclose={() => (boothOpen = false)} />{/if}
+{#if boothOpen && PhotoBooth}<PhotoBooth onclose={() => (boothOpen = false)} />{/if}
 
 <style>
 	.booth-trigger {
