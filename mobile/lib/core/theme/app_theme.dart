@@ -255,27 +255,29 @@ abstract final class TraktaTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
       ),
-      textTheme: base.textTheme.copyWith(
-        headlineLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -1,
-          color: c[3],
-        ),
-        headlineSmall: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -.6,
-          color: c[3],
-        ),
-        titleLarge: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: c[3],
-        ),
-        bodyMedium: TextStyle(fontSize: 14, height: 1.5, color: c[3]),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.5, color: c[3]),
-      ),
+      textTheme: base.textTheme
+          .copyWith(
+            headlineLarge: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -1,
+              color: c[3],
+            ),
+            headlineSmall: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -.6,
+              color: c[3],
+            ),
+            titleLarge: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: c[3],
+            ),
+            bodyMedium: TextStyle(fontSize: 14, height: 1.5, color: c[3]),
+            bodyLarge: TextStyle(fontSize: 16, height: 1.5, color: c[3]),
+          )
+          .apply(fontFamily: 'Inter'),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: c[2],
@@ -292,7 +294,11 @@ abstract final class TraktaTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, 52),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius.clamp(0, 28)),
           ),

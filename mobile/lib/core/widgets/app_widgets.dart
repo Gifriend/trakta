@@ -110,6 +110,7 @@ class PrimaryAction extends ConsumerWidget {
     if (prefs.theme == AppTheme.liquid &&
         defaultTargetPlatform == TargetPlatform.iOS &&
         !prefs.reduceTransparency &&
+        !MediaQuery.highContrastOf(context) &&
         !busy &&
         onPressed != null) {
       return SizedBox(
@@ -196,7 +197,12 @@ class PageBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListView(
     physics: const AlwaysScrollableScrollPhysics(),
-    padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + MediaQuery.paddingOf(context).bottom),
+    padding: EdgeInsets.fromLTRB(
+      20,
+      12,
+      20,
+      32 + MediaQuery.paddingOf(context).bottom,
+    ),
     children: [
       Center(
         child: ConstrainedBox(

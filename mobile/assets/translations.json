@@ -398,5 +398,6 @@
   "Mode gelap": "Dark mode",
   "Presensi": "Attendance",
   "Stiker": "Stickers",
-  "Tanggal akhir": "End date"
+  "Tanggal akhir": "End date",
+  "Menunggu sinkronisasi server. Presensi baru memerlukan internet.": "Waiting for server sync. New attendance requires an internet connection."
 }
