@@ -162,7 +162,17 @@ try {
 	});
 	await setEmulatorRules(appRules);
 	await page.getByRole('button', { name: 'Muat ulang data' }).click();
+	await page.setViewportSize({ width: 375, height: 812 });
+	const dailyAction = page.getByRole('button', { name: 'Presensi masuk', exact: true });
+	await dailyAction.waitFor();
+	assert.equal(await page.locator('video').count(), 0, 'camera waits for the attendance action');
+	assert.ok(
+		await dailyAction.evaluate((button) => button.getBoundingClientRect().bottom < innerHeight)
+	);
+	await page.screenshot({ path: 'test-results/today-mobile.png' });
+	await dailyAction.click();
 	await page.getByRole('heading', { name: 'Catat presensi masuk' }).waitFor();
+	await page.setViewportSize({ width: 1440, height: 1100 });
 	await combo('Tema').selectOption('neo');
 	await combo('Bahasa').selectOption('en');
 	await page.getByRole('heading', { name: 'Check in', exact: true }).waitFor();
@@ -232,8 +242,12 @@ try {
 		.getByRole('combobox', { name: 'Camera effect', exact: true })
 		.selectOption('mono');
 	await appearance.selectOption('light');
-	await settings('Settings').getByRole('link', { name: 'Attendance history' }).click();
+	await settings('Settings').getByRole('button', { name: 'Close settings' }).click();
 	await settings('Settings').waitFor({ state: 'hidden' });
+	await page
+		.locator('.mobile-navigation')
+		.getByRole('link', { name: 'History', exact: true })
+		.click();
 	assert.equal(new URL(page.url()).hash, '#riwayat');
 	assert.ok(
 		await page.locator('#riwayat').evaluate((history) => {
@@ -287,7 +301,8 @@ try {
 	await page.evaluate(() => {
 		window.__mirroredCamera = true;
 	});
-	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+	const retake = page.getByRole('button', { name: 'Ambil ulang', exact: true });
+	await retake.click();
 	const correction = page.getByRole('checkbox', { name: 'Koreksi kiri-kanan' });
 	await correction.check();
 	assert.equal(
@@ -297,7 +312,7 @@ try {
 		'true'
 	);
 	await page.getByRole('button', { name: 'Tutup kamera' }).click();
-	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+	await retake.click();
 	await correction.waitFor();
 	assert.equal(await correction.isChecked(), true);
 	assert.equal(
@@ -323,7 +338,7 @@ try {
 		await page.getByLabel('Pilih atau ambil foto presensi').getAttribute('capture'),
 		null
 	);
-	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+	await retake.click();
 	await page.waitForFunction(() => document.querySelector('video')?.readyState >= 2);
 	await page.evaluate(() => {
 		window.__cameraTestStream = document.querySelector('video').srcObject;
@@ -339,7 +354,7 @@ try {
 		),
 		true
 	);
-	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+	await retake.click();
 	await page.waitForFunction(() => document.querySelector('video')?.readyState >= 2);
 	await page.evaluate(() => {
 		window.__cameraTestStream = document.querySelector('video').srcObject;
@@ -386,9 +401,11 @@ try {
 	});
 	const buffer = Buffer.from(inputPhoto, 'base64');
 	for (const kind of ['masuk', 'pulang']) {
+		if (kind === 'pulang')
+			await page.getByRole('button', { name: 'Presensi pulang', exact: true }).click();
 		await page.getByRole('heading', { name: `Catat presensi ${kind}` }).waitFor();
 		if (kind === 'masuk') {
-			await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
+			await retake.click();
 			await page.waitForFunction(() => document.querySelector('video')?.readyState >= 2);
 			await page.evaluate(() => {
 				window.__cameraTestStream = document.querySelector('video').srcObject;
@@ -430,9 +447,15 @@ try {
 		);
 		await page.getByLabel('Catatan').fill(`Catatan ${kind} dari browser test`);
 		if (kind === 'masuk') {
+			const draftPhoto = await captured.getAttribute('src');
 			await context.setOffline(true);
 			await page.getByRole('status').filter({ hasText: 'Kamu sedang offline' }).first().waitFor();
 			assert.equal(await page.getByRole('button', { name: 'Konfirmasi masuk' }).isDisabled(), true);
+			assert.equal(await captured.getAttribute('src'), draftPhoto);
+			assert.equal(
+				await page.getByLabel('Catatan').inputValue(),
+				'Catatan masuk dari browser test'
+			);
 			await context.setOffline(false);
 		}
 		await page.getByRole('button', { name: `Konfirmasi ${kind}` }).click();
@@ -556,7 +579,11 @@ try {
 		name: photoWorkbook.suggestedFilename(),
 		active: true
 	});
-	const checkInPhoto = history.getByRole('button', { name: /Lihat foto masuk/ });
+	const historyCard = history.locator('.history-day').first();
+	assert.equal(await historyCard.getByRole('button', { name: /Lihat foto masuk/ }).count(), 0);
+	await historyCard.getByText('Lihat foto dan catatan', { exact: true }).click();
+	await historyCard.getByText('Catatan masuk dari browser test').waitFor();
+	const checkInPhoto = historyCard.getByRole('button', { name: /Lihat foto masuk/ });
 	await checkInPhoto.scrollIntoViewIfNeeded();
 	const thumbnail = checkInPhoto.locator('img');
 	await thumbnail.waitFor();
