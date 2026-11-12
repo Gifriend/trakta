@@ -201,6 +201,28 @@ const english: Record<string, string> = {
 	'Siap memulai hari? Lengkapi presensimu di bawah ini.': 'Complete the form below to check in.',
 	'Terima kasih untuk hari ini. Catat waktu pulangmu.': 'Complete the form below to check out.',
 	'Lokasi kerja': 'Work location',
+	'Memeriksa lokasi…': 'Checking location…',
+	'Lokasi perangkat memerlukan browser yang mendukung dan koneksi HTTPS.':
+		'Device location requires a supported browser and HTTPS.',
+	'Izinkan akses lokasi untuk mengambil foto presensi.':
+		'Allow location access to take attendance photos.',
+	'Lokasi belum dapat diperoleh. Aktifkan lokasi perangkat lalu coba lagi.':
+		'Location is unavailable. Enable device location and try again.',
+	'Ambil foto langsung dari kamera untuk presensi kantor.':
+		'Use the live camera for office attendance.',
+	'Lokasi belum cukup akurat. Dekati jendela atau area terbuka lalu coba lagi.':
+		'Location is not accurate enough. Move near a window or outdoors and try again.',
+	'Lokasimu berada di luar radius {radius} m dari Graha Sucofindo.':
+		'You are outside the {radius} m radius of Graha Sucofindo.',
+	'Ambil foto langsung dalam radius {radius} m dari Graha Sucofindo.':
+		'Take a live photo within {radius} m of Graha Sucofindo.',
+	'Lokasi perangkat dicatat saat foto diambil atau dipilih.':
+		'Device location is recorded when the photo is taken or selected.',
+	'Foto dan lokasi siap dikirim.': 'Photo and location are ready to submit.',
+	'Lokasi foto tercatat.': 'Photo location recorded.',
+	'Lokasi foto masuk': 'Check-in photo location',
+	'Lokasi foto pulang': 'Check-out photo location',
+	'Lokasi saat memilih file': 'Location when selecting the file',
 	'Di kantor': 'Office',
 	'Dari rumah': 'Remote',
 	'Dinas luar': 'Field work',

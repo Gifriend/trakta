@@ -2,11 +2,20 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type AttendanceKind = 'checkIn' | 'checkOut';
 export type WorkMode = 'office' | 'remote' | 'field';
+export type PhotoSource = 'camera' | 'gallery';
+
+export interface PhotoLocation {
+	latitude: number;
+	longitude: number;
+	accuracy: number;
+	source: PhotoSource;
+}
 
 export interface AttendanceEvent {
 	timestamp: Timestamp;
 	mode: WorkMode;
 	note: string;
+	photoLocation?: PhotoLocation;
 }
 
 export interface AttendanceDay {

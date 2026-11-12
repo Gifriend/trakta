@@ -8,12 +8,29 @@ service cloud.firestore {
       let wib = request.time + duration.value(7, 'h');
       return string(wib.year() * 10000 + wib.month() * 100 + wib.day());
     }
+    function insideOffice(location) {
+      // Approximate local distance in metres. Keep photo-location.ts in sync.
+      let north = (location.latitude - (-6.2517753)) * 110600;
+      let east = (location.longitude - 106.8422473) * 110660;
+      return north * north + east * east <= 150 * 150;
+    }
+    function validLocation(location, mode) {
+      return location is map
+        && location.keys().hasAll(['latitude', 'longitude', 'accuracy', 'source'])
+        && location.keys().hasOnly(['latitude', 'longitude', 'accuracy', 'source'])
+        && location.latitude is number && location.latitude >= -90 && location.latitude <= 90
+        && location.longitude is number && location.longitude >= -180 && location.longitude <= 180
+        && location.accuracy is number && location.accuracy >= 0 && location.accuracy <= 40075000
+        && location.source in ['camera', 'gallery']
+        && (mode != 'office' || (location.source == 'camera' && location.accuracy <= 100 && insideOffice(location)));
+    }
     function validEvent(event) {
       return event is map
-        && event.keys().hasAll(['timestamp', 'mode', 'note'])
-        && event.keys().hasOnly(['timestamp', 'mode', 'note'])
+        && event.keys().hasAll(['timestamp', 'mode', 'note', 'photoLocation'])
+        && event.keys().hasOnly(['timestamp', 'mode', 'note', 'photoLocation'])
         && event.timestamp == request.time
         && event.mode in ['office', 'remote', 'field']
+        && validLocation(event.photoLocation, event.mode)
         && event.note is string && event.note.size() <= 300;
     }
     function photoCommitted(uid, day, kind) {

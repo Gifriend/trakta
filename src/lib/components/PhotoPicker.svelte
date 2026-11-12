@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getPreferences } from '#lib/preferences.ts';
 	import { onMount, tick } from 'svelte';
-	import type { CompressedPhoto } from '#lib/types/attendance.ts';
+	import type { CompressedPhoto, PhotoLocation } from '#lib/types/attendance.ts';
+	import { OFFICE_RADIUS_METERS } from '#lib/utils/photo-location.ts';
 	import { CAMERA_EFFECTS, drawCameraFrame } from '#lib/utils/camera.ts';
 	import { drawPhotoFrame, type PhotoEdits } from '#lib/utils/photo-editor.ts';
 	import CameraEffectSelect from './CameraEffectSelect.svelte';
@@ -15,12 +16,16 @@
 		disabled,
 		onselect,
 		onactivechange,
+		beforeCapture,
+		allowGallery = true,
 		countdownSeconds = 0
 	}: {
 		photo: CompressedPhoto | null;
 		processing: boolean;
 		disabled: boolean;
-		onselect: (file: File, frame?: PhotoEdits['frame']) => Promise<void>;
+		onselect: (file: File, frame?: PhotoEdits['frame'], location?: PhotoLocation) => Promise<void>;
+		beforeCapture?: () => Promise<PhotoLocation>;
+		allowGallery?: boolean;
 		onactivechange: (active: boolean) => void;
 		countdownSeconds?: number;
 	} = $props();
@@ -148,6 +153,16 @@
 				if (version !== requestVersion || destroyed) return;
 			}
 			countdown = 0;
+			let location: PhotoLocation | undefined;
+			try {
+				location = await beforeCapture?.();
+			} catch (cause) {
+				if (!destroyed && version === requestVersion && cause instanceof Error) {
+					cameraError = cause.message;
+				}
+				return;
+			}
+			if (version !== requestVersion || destroyed || !video || !frameSize) return;
 			const canvas = document.createElement('canvas');
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
@@ -165,7 +180,8 @@
 			stopCamera();
 			await onselect(
 				new File([blob], `presensi-kamera-${Date.now()}.jpg`, { type: 'image/jpeg' }),
-				cameraFrame
+				cameraFrame,
+				location
 			);
 		} catch {
 			if (!destroyed && version === requestVersion)
@@ -184,7 +200,7 @@
 	async function chooseFile(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
-		if (!file) return;
+		if (!file || !allowGallery) return;
 		stopCamera();
 		cameraError = '';
 		try {
@@ -254,7 +270,7 @@
 				disabled={!frameSize || cameraState !== 'live' || disabled || processing || taking}
 				onclick={takePhoto}
 				><Icon name="camera" size={18} />{taking
-					? t('Mengambil foto kamera…')
+					? t(beforeCapture ? 'Memeriksa lokasi…' : 'Mengambil foto kamera…')
 					: t('Ambil foto')}</button
 			>
 		{:else if photo}
@@ -270,7 +286,13 @@
 		{:else}
 			<div class="upload-icon"><Icon name="camera" size={25} /></div>
 			<strong>{processing ? t('Menyiapkan fotomu…') : t('Foto untuk presensimu')}</strong>
-			<p>{t('Ambil foto langsung atau pilih dari perangkatmu.')}</p>
+			<p>
+				{t(
+					allowGallery
+						? 'Ambil foto langsung atau pilih dari perangkatmu.'
+						: 'Ambil foto langsung dari kamera untuk presensi kantor.'
+				)}
+			</p>
 		{/if}
 	</div>
 	{#if cameraState === 'live'}
@@ -308,13 +330,13 @@
 				><Icon name="camera" size={16} />{t('Buka kamera')}</button
 			>
 		{/if}
-		<button
-			type="button"
-			class="button secondary"
-			onclick={openGallery}
-			disabled={disabled || processing || taking}
-			><Icon name="image" size={16} />{t('Pilih galeri/file')}</button
-		>
+		{#if allowGallery}<button
+				type="button"
+				class="button secondary"
+				onclick={openGallery}
+				disabled={disabled || processing || taking}
+				><Icon name="image" size={16} />{t('Pilih galeri/file')}</button
+			>{/if}
 	</div>
 	<input
 		bind:this={fileInput}
@@ -324,11 +346,13 @@
 		accept="image/jpeg,image/png,image/webp"
 		onclick={stopCamera}
 		onchange={chooseFile}
-		disabled={disabled || processing || taking}
+		disabled={!allowGallery || disabled || processing || taking}
 		aria-label={t('Pilih atau ambil foto presensi')}
 		aria-describedby="photo-help"
 	/>
-	{#if cameraError}<p class="notice camera-error" role="alert">{t(cameraError)}</p>{/if}
+	{#if cameraError}<p class="notice camera-error" role="alert">
+			{t(cameraError, { radius: String(OFFICE_RADIUS_METERS) })}
+		</p>{/if}
 	<p id="photo-help" class="field-help">
 		<Icon name="image" size={13} />
 		{t('JPG, PNG, WebP · Otomatis diperkecil hingga 100 KB')}

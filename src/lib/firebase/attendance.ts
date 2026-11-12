@@ -21,6 +21,7 @@ import type {
 	AttendanceDay,
 	AttendanceKind,
 	CompressedPhoto,
+	PhotoLocation,
 	WorkMode
 } from '#lib/types/attendance.ts';
 import { dateKey } from '#lib/utils/date.ts';
@@ -84,6 +85,7 @@ export async function submitAttendance(input: {
 	mode: WorkMode;
 	note: string;
 	photo: CompressedPhoto;
+	photoLocation: PhotoLocation;
 }) {
 	if (!navigator.onLine) throw new Error('Hubungkan internet untuk mengirim presensi.');
 	if (input.photo.bytes > MAX_PHOTO_BYTES || input.photo.bytes <= 0) {
@@ -104,7 +106,12 @@ export async function submitAttendance(input: {
 			);
 		if (input.kind === 'checkOut' && !day?.checkIn)
 			throw new Error('Catat presensi masuk terlebih dahulu.');
-		const event = { timestamp: serverTimestamp(), mode: input.mode, note: input.note.trim() };
+		const event = {
+			timestamp: serverTimestamp(),
+			mode: input.mode,
+			note: input.note.trim(),
+			photoLocation: input.photoLocation
+		};
 		if (input.kind === 'checkIn') transaction.set(dayRef, { dateKey: key, checkIn: event });
 		else transaction.update(dayRef, { checkOut: event });
 		transaction.set(photoRef, {

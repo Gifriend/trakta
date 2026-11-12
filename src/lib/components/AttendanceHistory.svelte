@@ -268,6 +268,17 @@
 {#snippet dayNotes(day: AttendanceDay)}
 	{#if day.checkIn.note}<p><strong>{t('Masuk')}</strong> {day.checkIn.note}</p>{/if}
 	{#if day.checkOut?.note}<p><strong>{t('Pulang')}</strong> {day.checkOut.note}</p>{/if}
+	{#each [day.checkIn.photoLocation, day.checkOut?.photoLocation] as location, index (index)}
+		{#if location}
+			<p>
+				<strong>{t(index === 0 ? 'Lokasi foto masuk' : 'Lokasi foto pulang')}</strong>
+				{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)} · ±{Math.round(
+					location.accuracy
+				)} m
+				{#if location.source === 'gallery'}· {t('Lokasi saat memilih file')}{/if}
+			</p>
+		{/if}
+	{/each}
 {/snippet}
 
 <section id="riwayat" class="card history-card" aria-labelledby="history-title" tabindex="-1">
@@ -504,8 +515,8 @@
 									>{day.checkOut ? t('Lengkap') : t('Sudah masuk')}</span
 								></td
 							></tr
-						>{#if day.checkIn.note || day.checkOut?.note}<tr class="note-row"
-								><td colspan="6">{@render dayNotes(day)}</td></tr
+						>{#if day.checkIn.note || day.checkOut?.note || day.checkIn.photoLocation || day.checkOut?.photoLocation}<tr
+								class="note-row"><td colspan="6">{@render dayNotes(day)}</td></tr
 							>{/if}{/each}</tbody
 				>
 			</table>

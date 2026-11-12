@@ -7,7 +7,7 @@ Trakta is a simple attendance app for clocking in and out, with photos, work loc
 - Sign up, sign in, sign out, and reset your password through Firebase email authentication.
 - Clock in and out once each per day in **Asia/Jakarta (WIB)**.
 - Choose office, work from home, or off-site duty, with an optional note of up to 300 characters.
-- The front camera opens automatically when the attendance form is ready. Take a photo or use **Pilih galeri/file** (Choose gallery/file) to select a JPG, PNG, or WebP up to 20 MB. Images are compressed on your device to JPEG at **no more than 100,000 bytes (100 KB)** before upload.
+- The front camera opens automatically when the attendance form is ready. For remote or off-site attendance, **Pilih galeri/file** (Choose gallery/file) also accepts JPG, PNG, or WebP up to 20 MB. Images are compressed on your device to JPEG at **no more than 100,000 bytes (100 KB)** before upload.
 - Firestore server timestamps for both entries. Security rules reject client-generated timestamps, incorrect dates, duplicate entries, and clocking out before clocking in.
 - View the last 31 attendance days, the current month's summary, work duration, notes, and photos on demand.
 - PWA support: the app shell opens offline after an online visit. Submitting attendance requires a connection and server confirmation.
@@ -134,6 +134,8 @@ PWA support is enabled in production builds over HTTPS or localhost. On Android 
 
 Regenerate icons from `static/icon.svg` with `bun scripts/generate-icons.mjs` (requires Google Chrome, like the browser tests).
 
-Live camera capture requires HTTPS or localhost, browser support, and camera permission. If access is denied or a camera isn't available, you can still choose a gallery image or file. The camera stops after a photo is taken, when switching to the gallery, when the tab is hidden, or when the form is closed. Photos are only sent when attendance is submitted.
+Live camera capture requires HTTPS or localhost, browser support, and camera permission. Gallery selection is available for remote attendance, field attendance, and photo booth sessions. The camera stops after a photo is taken, when switching to the gallery, when the tab is hidden, or when the form is closed. Photos are only sent when attendance is submitted.
+
+Attendance photos require location permission. For **Di kantor**, use the live camera within 150 m of the Graha Sucofindo pin in Pancoran, with a location accuracy estimate of 100 m or better. For **Dari rumah** and **Dinas luar**, gallery uploads record the device location when the file is selected. Check-in and check-out each store their own `photoLocation` in Firestore. Deploy the updated rules and the corresponding website release together.
 
 References: [Firebase auth](https://firebase.google.com/docs/auth/web/password-auth), [Firestore transactions](https://firebase.google.com/docs/firestore/manage-data/transactions), [security rules](https://firebase.google.com/docs/firestore/security/rules-fields), [SvelteKit service workers](https://svelte.dev/docs/kit/service-workers).

@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { getPreferences } from '#lib/preferences.ts';
-	import type { AttendanceKind, CompressedPhoto, WorkMode } from '#lib/types/attendance.ts';
+	import type {
+		AttendanceKind,
+		CompressedPhoto,
+		PhotoLocation,
+		WorkMode
+	} from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
 	import { compressPhoto } from '#lib/utils/image.ts';
+	import {
+		locatePhoto,
+		OFFICE_RADIUS_METERS,
+		photoLocationIssue
+	} from '#lib/utils/photo-location.ts';
 	import {
 		DEFAULT_PHOTO_EDITS,
 		decodePhoto,
@@ -23,6 +33,8 @@
 	let mode = $state<WorkMode>('office');
 	let note = $state('');
 	let photo = $state.raw<CompressedPhoto | null>(null);
+	let photoLocation = $state.raw<PhotoLocation | null>(null);
+	const locationIssue = $derived(photoLocation ? photoLocationIssue(photoLocation, mode) : '');
 	let originalPhoto = $state.raw<CompressedPhoto | null>(null);
 	let photoEdits = $state.raw(DEFAULT_PHOTO_EDITS);
 	let editing = $state(false);
@@ -33,15 +45,30 @@
 	let picker: { openCamera: () => Promise<void>; stopCamera: () => void };
 	let selectionVersion = 0;
 
-	async function choosePhoto(file: File, frame: PhotoEdits['frame'] = 'none') {
+	async function locateCapture() {
+		const location = await locatePhoto('camera');
+		const issue = photoLocationIssue(location, mode);
+		if (issue) throw new Error(issue);
+		return location;
+	}
+
+	async function choosePhoto(
+		file: File,
+		frame: PhotoEdits['frame'] = 'none',
+		captureLocation?: PhotoLocation
+	) {
 		const version = ++selectionVersion;
 		error = '';
 		processing = true;
 		try {
+			const location = captureLocation ?? (await locatePhoto('gallery'));
+			const issue = photoLocationIssue(location, mode);
+			if (issue) throw new Error(issue);
 			const result = await compressPhoto(file);
 			if (version !== selectionVersion) return;
 			originalPhoto = result;
 			photo = result;
+			photoLocation = location;
 			photoEdits = DEFAULT_PHOTO_EDITS;
 			if (frame !== 'none') {
 				const edits = { ...DEFAULT_PHOTO_EDITS, frame };
@@ -57,15 +84,17 @@
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
 		if (!online || submitting || processing || cameraActive || editing) return;
-		if (!photo) {
+		if (!photo || !photoLocation) {
 			error = 'Tambahkan foto untuk melengkapi presensimu.';
 			return;
 		}
+		if (locationIssue) return;
 		submitting = true;
 		error = '';
 		try {
-			await submitAttendance({ uid, kind, mode, note, photo });
+			await submitAttendance({ uid, kind, mode, note, photo, photoLocation });
 			photo = null;
+			photoLocation = null;
 			originalPhoto = null;
 			note = '';
 			onsuccess();
@@ -101,6 +130,23 @@
 		<span class="icon-tile"><Icon name={kind === 'checkIn' ? 'enter' : 'exit'} size={22} /></span>
 	</div>
 	<form onsubmit={submit}>
+		<fieldset disabled={submitting || processing}>
+			<legend>{t('Lokasi kerja')}</legend>
+			<div class="mode-options">
+				{#each Object.entries(WORK_MODES) as [value, text] (value)}<label
+						class={{ selected: mode === value }}
+						><input type="radio" name="work-mode" {value} bind:group={mode} />{t(text)}</label
+					>{/each}
+			</div>
+		</fieldset>
+		<p class="timestamp-note">
+			{t(
+				mode === 'office'
+					? 'Ambil foto langsung dalam radius {radius} m dari Graha Sucofindo.'
+					: 'Lokasi perangkat dicatat saat foto diambil atau dipilih.',
+				{ radius: String(OFFICE_RADIUS_METERS) }
+			)}
+		</p>
 		<div id="photo-step" class="photo-step">
 			<label for="photo">
 				{t(photo && !cameraActive ? 'Cek foto presensi' : 'Foto presensi')}
@@ -111,6 +157,8 @@
 				{photo}
 				{processing}
 				disabled={submitting}
+				beforeCapture={locateCapture}
+				allowGallery={mode !== 'office'}
 				onselect={choosePhoto}
 				onactivechange={(active) => {
 					cameraActive = active;
@@ -119,7 +167,9 @@
 			{#if photo && !cameraActive && !processing}
 				<div class="photo-actions">
 					<p class="photo-ready" role="status">
-						<Icon name="check" size={16} />{t('Foto siap dikirim.')}
+						<Icon name="check" size={16} />{t(
+							locationIssue ? 'Lokasi foto tercatat.' : 'Foto dan lokasi siap dikirim.'
+						)}
 					</p>
 					<button
 						type="button"
@@ -130,16 +180,10 @@
 					>
 				</div>
 			{/if}
+			{#if locationIssue}<p class="notice error" role="alert">
+					{t(locationIssue, { radius: String(OFFICE_RADIUS_METERS) })}
+				</p>{/if}
 		</div>
-		<fieldset disabled={submitting || processing}>
-			<legend>{t('Lokasi kerja')}</legend>
-			<div class="mode-options">
-				{#each Object.entries(WORK_MODES) as [value, text] (value)}<label
-						class={{ selected: mode === value }}
-						><input type="radio" name="work-mode" {value} bind:group={mode} />{t(text)}</label
-					>{/each}
-			</div>
-		</fieldset>
 		<label for="note">{t('Catatan')} <span class="optional">{t('(opsional)')}</span></label
 		><textarea
 			id="note"
@@ -152,7 +196,7 @@
 				: t('Ada pencapaian yang ingin dicatat?')}></textarea>
 		<div class="character-count">{note.length}/300</div>
 		{#if error}<p class="notice error" role="alert">
-				{t(error)}
+				{t(error, { radius: String(OFFICE_RADIUS_METERS) })}
 				{#if photo}{t('Foto dan catatan masih tersedia di formulir ini.')}{/if}
 			</p>{/if}
 		{#if !online}<p class="notice" role="status">
@@ -173,7 +217,13 @@
 			<button
 				type="submit"
 				class="button primary submit-attendance"
-				disabled={!online || processing || submitting || cameraActive || !photo}
+				disabled={!online ||
+					processing ||
+					submitting ||
+					cameraActive ||
+					!photo ||
+					!photoLocation ||
+					!!locationIssue}
 				>{t(
 					submitting
 						? 'Mengirim presensi…'
