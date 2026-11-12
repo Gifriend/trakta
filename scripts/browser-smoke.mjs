@@ -560,6 +560,47 @@ try {
 		}
 	}
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
+	await page.setViewportSize({ width: 375, height: 812 });
+	await page.getByRole('button', { name: 'Buka fotobox', exact: true }).click();
+	const booth = page.getByRole('dialog', { name: 'Fotobox', exact: true });
+	await booth.getByLabel('Jumlah foto').selectOption('2');
+	await booth.getByLabel('Timer kamera').selectOption('3');
+	await booth.getByLabel('Susunan foto').selectOption('grid');
+	for (let pose = 0; pose < 2; pose++) {
+		await booth.getByRole('button', { name: 'Ambil pose berikutnya' }).click();
+		await booth.getByRole('button', { name: 'Ambil foto', exact: true }).click();
+		await booth.getByRole('status').filter({ hasText: /^3$/ }).waitFor();
+		await booth.getByAltText(`Pose ${pose + 1}`, { exact: true }).waitFor();
+	}
+	await booth.getByRole('button', { name: 'Hias fotobox' }).click();
+	const boothEditor = page.getByRole('dialog', { name: 'Edit foto', exact: true });
+	await boothEditor.getByRole('button', { name: 'Tambah stiker 🌸', exact: true }).click();
+	await boothEditor.getByLabel('Emoji atau simbol sendiri').fill('♡');
+	await boothEditor.getByRole('button', { name: 'Tambah', exact: true }).click();
+	await boothEditor.getByLabel('Posisi horizontal').fill('70');
+	await boothEditor.getByLabel('Ukuran stiker').fill('25');
+	await boothEditor
+		.getByRole('button', { name: 'Geser stiker pada foto atau gunakan tombol panah' })
+		.focus();
+	await page.keyboard.press('ArrowRight');
+	assert.equal(await boothEditor.getByLabel('Posisi horizontal').inputValue(), '71');
+	await boothEditor.getByLabel('Teks pada foto').fill('Trakta memories');
+	await boothEditor.getByRole('button', { name: 'Gunakan foto', exact: true }).click();
+	await boothEditor.waitFor({ state: 'hidden' });
+	await booth.getByAltText('Hasil fotobox', { exact: true }).waitFor();
+	await page.screenshot({ path: 'test-results/photobooth-mobile.png' });
+	const [boothDownload] = await Promise.all([
+		page.waitForEvent('download'),
+		booth.getByRole('link', { name: 'Unduh fotobox', exact: true }).click()
+	]);
+	await boothDownload.saveAs('test-results/trakta-fotobox.jpg');
+	assert.ok((await readFile('test-results/trakta-fotobox.jpg')).length > 0);
+	await booth.getByRole('button', { name: 'Hias fotobox' }).click();
+	assert.equal(await boothEditor.getByLabel('Stiker yang diedit').locator('option').count(), 3);
+	assert.equal(await boothEditor.getByLabel('Teks pada foto').inputValue(), 'Trakta memories');
+	await boothEditor.getByRole('button', { name: 'Batal', exact: true }).click();
+	await booth.getByRole('button', { name: 'Tutup fotobox', exact: true }).click();
+	await page.setViewportSize({ width: 1440, height: 1100 });
 	const emulator = await initializeTestEnvironment({
 		projectId: 'demo-presensi',
 		firestore: { host: '127.0.0.1', port: 8085 }
