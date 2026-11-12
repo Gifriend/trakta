@@ -1,0 +1,4 @@
+{
+  "FIREBASE_USE_EMULATORS": "true",
+  "FIREBASE_EMULATOR_HOST": "127.0.0.1"
+}
