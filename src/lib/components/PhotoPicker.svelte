@@ -57,7 +57,7 @@
 		return 'Kamera belum dapat digunakan. Coba buka kembali atau pilih foto dari galeri/file.';
 	}
 
-	async function openCamera() {
+	export async function openCamera() {
 		if (disabled || processing || taking || destroyed || document.hidden) return;
 		stopCamera();
 		cameraError = '';
@@ -260,17 +260,19 @@
 		</div>
 	{/if}
 	<div class="source-options">
-		<button
-			type="button"
-			class="button secondary"
-			onclick={openCamera}
-			disabled={disabled || processing || taking || cameraState !== 'closed'}
-			><Icon name="camera" size={16} />{cameraState === 'starting'
-				? t('Membuka kamera…')
-				: cameraState === 'live'
-					? t('Kamera aktif')
-					: t('Buka kamera')}</button
-		>
+		{#if !photo || cameraState !== 'closed'}
+			<button
+				type="button"
+				class="button secondary"
+				onclick={openCamera}
+				disabled={disabled || processing || taking || cameraState !== 'closed'}
+				><Icon name="camera" size={16} />{cameraState === 'starting'
+					? t('Membuka kamera…')
+					: cameraState === 'live'
+						? t('Kamera aktif')
+						: t('Buka kamera')}</button
+			>
+		{/if}
 		<button
 			type="button"
 			class="button secondary"

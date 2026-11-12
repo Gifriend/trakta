@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { getPreferences } from '#lib/preferences.ts';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import type { User } from 'firebase/auth';
-	import { WORK_MODES, type AttendanceDay } from '#lib/types/attendance.ts';
+	import type { AttendanceDay } from '#lib/types/attendance.ts';
 	import { watchAttendance } from '#lib/firebase/attendance.ts';
 	import { logout, friendlyError } from '#lib/firebase/auth.ts';
 	import { dateKey, formatDate, formatTime, durationLabel } from '#lib/utils/date.ts';
@@ -36,6 +36,8 @@
 		days.filter((day) => day.dateKey.startsWith(dateKey(now).slice(0, 6)))
 	);
 	const nextKind = $derived(today?.checkIn ? 'checkOut' : 'checkIn');
+	const formKey = $derived(`${dateKey(now)}-${nextKind}`);
+	let activeForm = $state('');
 	let stopWatching: (() => void) | undefined;
 	function subscribe() {
 		stopWatching?.();
@@ -79,7 +81,14 @@
 		}
 	}
 	function submitted() {
-		message = 'Presensi berhasil diterima server. Selamat melanjutkan harimu!';
+		message = 'Presensi berhasil diterima server.';
+	}
+	async function startAttendance() {
+		activeForm = formKey;
+		await tick();
+		const heading = document.getElementById('attendance-title');
+		heading?.focus({ preventScroll: true });
+		heading?.scrollIntoView({ block: 'start' });
 	}
 </script>
 
@@ -136,12 +145,6 @@
 				<MobileSettings camera>
 					{#snippet children(close)}
 						<nav aria-label={t('Navigasi utama')}>
-							<a href="#ringkasan" class="nav-link" onclick={close}
-								><Icon name="grid" size={18} />{t('Ringkasan')}</a
-							>
-							<a href="#riwayat" class="nav-link" onclick={close}
-								><Icon name="calendar" size={18} />{t('Riwayat presensi')}</a
-							>
 							<button
 								type="button"
 								class="nav-link settings-logout"
@@ -156,15 +159,16 @@
 				</MobileSettings>
 			</div>
 		</header>
+		<nav class="mobile-navigation" aria-label={t('Navigasi utama')}>
+			<a href="#ringkasan"><Icon name="grid" size={20} />{t('Hari ini')}</a>
+			{#if !loadError}
+				<a href="#riwayat"><Icon name="calendar" size={20} />{t('Riwayat')}</a>
+			{/if}
+		</nav>
 		<main id="main">
 			<div id="ringkasan" class="page-heading">
 				<div>
-					<p class="mini-label">{t('HARI BARU, KESEMPATAN BARU')}</p>
 					<h1>{t('Halo, {name}', { name: firstName })}<span class="greeting-dot">.</span></h1>
-					<p class="muted">{t('Setiap kehadiran adalah awal dari sesuatu yang berarti.')}</p>
-				</div>
-				<div class="date-label">
-					<Icon name="calendar" size={16} /><span>{formatDate(now, {}, preferences.locale)}</span>
 				</div>
 			</div>
 			{#if message}<div class="notice success status-message" role="status">
@@ -184,166 +188,113 @@
 					<Icon name="wifi" size={17} />
 					{t('Kamu sedang offline. Presensi baru memerlukan internet.')}
 				</div>{/if}
-			<section class="stats-grid" aria-label={t('Ringkasan kehadiran')} aria-busy={loading}>
-				{#if loading}
-					{#each ['masuk', 'pulang', 'bulan'] as item (item)}
-						<div class="card stat-card" aria-hidden="true">
-							<span class="skeleton stat-icon placeholder-icon"></span>
-							<div class="stat-placeholder">
-								<span class="skeleton"></span>
-								<span class="skeleton"></span>
-							</div>
-						</div>
-					{/each}
-				{:else}
-					<div class="card stat-card">
-						<span class="stat-icon green"><Icon name="enter" size={20} /></span>
+			{#if loading}
+				<section class="card daily-panel">
+					<LoadingSkeleton label={t('Menyiapkan ruang presensimu…')} />
+				</section>
+			{:else if loadError}
+				<section class="card loading-card" role="alert">
+					<Icon name="info" size={28} />
+					<h2>
+						{t(permissionDenied ? 'Akses presensi belum diizinkan' : 'Data belum dapat dimuat')}
+					</h2>
+					<p>{t(loadError)}</p>
+					<button type="button" class="button secondary" onclick={subscribe}
+						>{t('Muat ulang data')}</button
+					>
+				</section>
+			{:else}
+				<section class="card daily-panel" aria-labelledby="daily-title">
+					<div class="daily-heading">
 						<div>
-							<p>{t('Jam masuk')}</p>
-							<strong
-								>{formatTime(today?.checkIn.timestamp?.toDate(), preferences.locale)}<small
-									>{today?.checkIn ? 'WIB' : ''}</small
-								></strong
-							><span
-								>{loadError
-									? t('Data belum tersedia')
+							<h2 id="daily-title">{t('Hari ini')}</h2>
+							<p>{formatDate(now, {}, preferences.locale)}</p>
+						</div>
+						<span class={['daily-status', { recorded: today?.checkIn }]}>
+							{t(
+								today?.checkOut
+									? 'Presensi selesai'
 									: today?.checkIn
-										? t('Selamat bekerja hari ini')
-										: t('Belum ada presensi masuk')}</span
-							>
-						</div>
+										? 'Sudah masuk'
+										: 'Belum ada presensi masuk'
+							)}
+						</span>
 					</div>
-					<div class="card stat-card">
-						<span class="stat-icon orange"><Icon name="exit" size={20} /></span>
+					<dl class="daily-times">
 						<div>
-							<p>{t('Jam pulang')}</p>
-							<strong
-								>{formatTime(today?.checkOut?.timestamp?.toDate(), preferences.locale)}<small
-									>{today?.checkOut ? 'WIB' : ''}</small
-								></strong
-							><span
-								>{loadError
-									? t('Data belum tersedia')
-									: today?.checkOut
-										? t('Sampai jumpa esok hari')
-										: t('Belum ada presensi pulang')}</span
-							>
-						</div>
-					</div>
-					<div class="card stat-card">
-						<span class="stat-icon blue"><Icon name="calendar" size={20} /></span>
-						<div>
-							<p>{t('Kehadiran bulan ini')}</p>
-							<strong
-								>{loadError ? '—' : monthDays.length}<small
-									>{preferences.locale === 'en' && !loadError && monthDays.length === 1
-										? 'day'
-										: t('hari')}</small
-								></strong
-							><span
-								>{formatDate(
-									now,
-									{ weekday: undefined, day: undefined, month: 'long' },
+							<dt>{t('Jam masuk')}</dt>
+							<dd>
+								{formatTime(
+									today?.checkIn.timestamp?.toDate(),
 									preferences.locale
-								)}</span
-							>
+								)}{#if today?.checkIn.timestamp}<span>WIB</span>{/if}
+							</dd>
 						</div>
-					</div>
-				{/if}
-			</section>
-			<div class="dashboard-grid">
-				<div class="primary-column">
-					{#if loading}<section class="card">
-							<LoadingSkeleton label={t('Menyiapkan ruang presensimu…')} />
-						</section>{:else if loadError}<section class="card loading-card" role="alert">
-							<Icon name="info" size={28} />
-							<h2>
-								{permissionDenied
-									? t('Akses presensi belum diizinkan')
-									: t('Data belum dapat dimuat')}
-							</h2>
-							<p>{t(loadError)}</p>
-							<button type="button" class="button secondary" onclick={subscribe}
-								>{t('Muat ulang data')}</button
-							>
-						</section>{:else if today?.checkOut}<section class="card completed-card">
-							<div class="complete-symbol"><Icon name="check" size={38} /></div>
-							<span class="mini-label">{t('TERIMA KASIH SUDAH HADIR')}</span>
-							<h2>{t('Hari ini, tuntas.')}</h2>
-							<p>
-								{t('Presensi masuk dan pulangmu sudah tercatat.')}<br />{t(
-									'Saatnya menikmati waktu istirahat.'
-								)}
-							</p>
-							<div class="completed-duration">
-								<Icon name="clock" size={18} /><strong
-									>{durationLabel(
+						<div>
+							<dt>{t('Jam pulang')}</dt>
+							<dd>
+								{formatTime(
+									today?.checkOut?.timestamp?.toDate(),
+									preferences.locale
+								)}{#if today?.checkOut?.timestamp}<span>WIB</span>{/if}
+							</dd>
+						</div>
+					</dl>
+					{#if today?.checkOut}
+						<div class="daily-complete">
+							<Icon name="check" size={20} />
+							<div>
+								<h3>{t('Hari ini, tuntas.')}</h3>
+								<p>
+									{t('Durasi')}
+									{durationLabel(
 										today.checkIn.timestamp?.toDate(),
 										today.checkOut.timestamp?.toDate(),
 										preferences.locale
-									)}</strong
-								><span>{t('rentang kehadiran hari ini')}</span>
-							</div>
-							<span class="completion-date">{formatDate(now, {}, preferences.locale)}</span>
-						</section>{:else}{#key `${dateKey(now)}-${nextKind}`}<AttendanceForm
-								uid={user.uid}
-								kind={nextKind}
-								{online}
-								onsuccess={submitted}
-							/>{/key}{/if}
-				</div>
-				<aside class="support-column">
-					<section class="today-card">
-						<div class="section-heading">
-							<h2>{t('Harimu, sekilas')}</h2>
-							<span class="today-badge">{t('HARI INI')}</span>
-						</div>
-						<div class="live-clock">{formatTime(now, preferences.locale)}<span>WIB</span></div>
-						<p class="clock-caption">{t('Waktu Indonesia Barat')}</p>
-						<div class="timeline">
-							<div class={['timeline-item', { done: today?.checkIn }]}>
-								<span class="timeline-marker"
-									>{#if today?.checkIn}<Icon name="check" size={12} />{:else}1{/if}</span
-								>
-								<div>
-									<strong>{t('Presensi masuk')}</strong>
-									<p>
-										{today?.checkIn
-											? `${formatTime(today.checkIn.timestamp?.toDate(), preferences.locale)} WIB · ${t(WORK_MODES[today.checkIn.mode])}`
-											: t('Mulai hari dengan semangat')}
-									</p>
-								</div>
-							</div>
-							<div class={['timeline-item', { done: today?.checkOut }]}>
-								<span class="timeline-marker"
-									>{#if today?.checkOut}<Icon name="check" size={12} />{:else}2{/if}</span
-								>
-								<div>
-									<strong>{t('Presensi pulang')}</strong>
-									<p>
-										{today?.checkOut
-											? `${formatTime(today.checkOut.timestamp?.toDate(), preferences.locale)} WIB · ${t('Sudah tercatat')}`
-											: t('Tutup hari dengan pencapaian')}
-									</p>
-								</div>
+									)}
+								</p>
 							</div>
 						</div>
-					</section>
-					<section class="tip-card">
-						<span class="tip-icon"><Icon name="spark" size={20} /></span>
-						<h2>{t('Setiap langkah berarti.')}</h2>
-						<p>{t('Setiap hari adalah kesempatan untuk tumbuh dan memberi yang terbaik.')}</p>
-						<div class="tip-line"></div>
-						<span>{t('Satu hari. Satu langkah lebih baik.')}</span>
-					</section>
-					<div class="privacy-note">
-						<Icon name="shield" size={18} />
-						<p>{t('Data dan foto presensimu hanya dapat diakses melalui akunmu.')}</p>
+					{:else}
+						<button
+							type="button"
+							class="button primary daily-action"
+							onclick={startAttendance}
+							disabled={!online}
+							aria-expanded={activeForm === formKey}
+							aria-controls={activeForm === formKey ? 'attendance-form' : undefined}
+						>
+							<Icon name={nextKind === 'checkIn' ? 'enter' : 'exit'} size={20} />
+							{t(nextKind === 'checkIn' ? 'Presensi masuk' : 'Presensi pulang')}
+							<Icon name="arrow" size={18} />
+						</button>
+					{/if}
+				</section>
+				{#if !today?.checkOut && activeForm === formKey}
+					{#key formKey}
+						<AttendanceForm uid={user.uid} kind={nextKind} {online} onsuccess={submitted} />
+					{/key}
+				{/if}
+				<section class="card monthly-summary" aria-label={t('Kehadiran bulan ini')}>
+					<div>
+						<h2>{t('Kehadiran bulan ini')}</h2>
+						<p>
+							{formatDate(
+								now,
+								{ weekday: undefined, day: undefined, month: 'long' },
+								preferences.locale
+							)}
+						</p>
 					</div>
-					<div class="mobile-install"><PwaInstall /></div>
-				</aside>
-			</div>
+					<strong
+						>{monthDays.length}
+						<span>{preferences.locale === 'en' && monthDays.length === 1 ? 'day' : t('hari')}</span
+						></strong
+					>
+				</section>
+			{/if}
 			{#if !loadError}<AttendanceHistory {days} uid={user.uid} {loading} />{/if}
+			<div class="mobile-install"><PwaInstall /></div>
 			<footer class="page-footer">
 				<span>Trakta <span class="muted">{t('Teman setiap hari kerja.')}</span></span><span
 					>{t('Zona waktu Asia/Jakarta · WIB')}</span
@@ -354,23 +305,6 @@
 </div>
 
 <style>
-	.placeholder-icon {
-		width: 40px;
-		height: 40px;
-	}
-	.stat-placeholder {
-		display: grid;
-		align-content: center;
-		flex: 1;
-		gap: 8px;
-	}
-	.stat-placeholder span {
-		height: 12px;
-	}
-	.stat-placeholder span:last-child {
-		width: 54%;
-		height: 19px;
-	}
 	.app-shell {
 		--shell-gutter: clamp(16px, 5vw, 25px);
 		display: flex;
@@ -550,269 +484,145 @@
 		margin: 0 auto;
 	}
 	.page-heading {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		margin-bottom: 22px;
-	}
-	.mini-label {
-		font-size: 9px;
-		font-weight: 650;
-		letter-spacing: 1.4px;
-		color: var(--primary);
-		margin: 0 0 10px;
+		margin-bottom: 16px;
 	}
 	h1 {
-		font-size: clamp(30px, 4.7vw, 34px);
-		font-weight: 650;
-		letter-spacing: -1.1px;
-		margin: 0 0 10px;
+		font-size: clamp(23px, 5vw, 32px);
+		font-weight: 700;
+		letter-spacing: -0.6px;
+		margin: 0;
 	}
 	.greeting-dot {
 		color: var(--primary);
 	}
-	.page-heading .muted {
-		font-size: 12px;
-		line-height: 1.7;
-		margin: 0;
+	.daily-panel,
+	.monthly-summary {
+		padding: clamp(16px, 4vw, 26px);
+		margin-bottom: 16px;
 	}
-	.date-label {
-		display: none;
-		align-items: center;
-		gap: 8px;
+	.daily-heading {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		align-items: start;
+		gap: 10px 16px;
+	}
+	.daily-heading h2 {
+		font-size: 23px;
+	}
+	.daily-heading p,
+	.monthly-summary p,
+	.daily-complete p {
+		margin: 4px 0 0;
 		color: var(--muted);
-		font-size: 10px;
-		padding: 11px 13px;
-		border: 1px solid var(--border);
-		border-radius: 7px;
-		background: var(--surface);
-		white-space: nowrap;
+		font-size: 13px;
 	}
-	.stats-grid {
+	.daily-status {
+		display: inline-flex;
+		padding: 5px 9px;
+		border-radius: var(--control-radius);
+		background: var(--warning-soft);
+		color: var(--warning);
+		font-size: 12px;
+		font-weight: 650;
+	}
+	.daily-status.recorded {
+		background: var(--primary-soft);
+		color: var(--primary);
+	}
+	.daily-times {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 9px;
-		margin-bottom: 18px;
+		gap: 12px;
+		margin: 16px 0;
 	}
-	.stat-card {
-		padding: 16px 12px;
-		display: flex;
-		gap: 8px;
-		min-width: 0;
+	.daily-times > div {
+		padding: 10px 12px;
+		background: var(--subtle);
+		border: 1px solid var(--border);
+		border-radius: var(--control-radius);
 	}
-	.stat-card:last-child {
-		grid-column: 1 / -1;
-		align-items: center;
-	}
-	.stat-card:last-child > div {
-		display: flex;
-		align-items: center;
-		flex: 1;
-		flex-wrap: wrap;
-		gap: 5px 12px;
-	}
-	.stat-card:last-child p {
-		margin: 0;
-		flex: 1;
-	}
-	.stat-card:last-child div > span {
-		display: none;
-	}
-	.stat-icon {
-		border-radius: 10px;
-		padding: 7px;
-		width: 31px;
-		height: 33px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-	.green {
-		color: var(--primary);
-		background: var(--primary-soft);
-	}
-	.orange {
-		color: var(--arrival-ink);
-		background: var(--arrival-surface);
-	}
-	.blue {
-		color: var(--departure-ink);
-		background: var(--departure-surface);
-	}
-	.stat-card p {
+	.daily-times dt {
+		font-size: 13px;
 		color: var(--muted);
-		font-size: 11px;
-		margin: 0 0 11px;
 	}
-	.stat-card strong {
-		font-size: 25px;
-		line-height: 1;
-		letter-spacing: -1px;
-		font-weight: 600;
-		display: block;
-	}
-	.stat-card strong small {
-		font-size: 10px;
-		letter-spacing: 0;
-		color: var(--muted);
-		margin-left: 7px;
-		font-weight: 450;
-	}
-	.stat-card div > span {
-		font-size: 9px;
-		color: var(--muted);
-		display: block;
-		margin-top: 11px;
-		line-height: 1.6;
-	}
-	.dashboard-grid {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 18px;
-		margin-bottom: 26px;
-	}
-	.primary-column {
-		min-width: 0;
-	}
-	.support-column {
-		display: grid;
-		align-content: start;
-		gap: 19px;
-	}
-	.today-card {
-		background: var(--forest);
-		color: white;
-		padding: 23px;
-		border-radius: 12px;
-	}
-	.today-card h2 {
-		font-size: 14px;
-		font-weight: 500;
-	}
-	.today-badge {
-		font-size: 8px;
-		font-weight: 600;
-		letter-spacing: 1px;
-		background: #ffffff12;
-		border: 1px solid #ffffff20;
-		padding: 5px 7px;
-		border-radius: 4px;
-		color: #d3e1dc;
-	}
-	.live-clock {
-		font-size: 46px;
-		line-height: 1.2;
-		font-weight: 450;
-		letter-spacing: -2px;
-		margin-top: 18px;
+	.daily-times dd {
+		margin: 2px 0 0;
+		font-size: clamp(20px, 5vw, 27px);
+		font-weight: 700;
 		font-variant-numeric: tabular-nums;
 	}
-	.live-clock span {
+	.daily-times dd span {
 		font-size: 11px;
-		color: #b9d1cc;
-		letter-spacing: 0;
-		margin-left: 10px;
-	}
-	.clock-caption {
-		font-size: 10px;
-		margin: 5px 0 26px;
-		color: #b9d1cc;
-	}
-	.timeline {
-		border-top: 1px solid #ffffff1c;
-		padding-top: 23px;
-	}
-	.timeline-item {
-		display: flex;
-		gap: 12px;
-		position: relative;
-	}
-	.timeline-item:first-child {
-		padding-bottom: 27px;
-	}
-	.timeline-item:first-child::after {
-		content: '';
-		position: absolute;
-		left: 11px;
-		top: 27px;
-		bottom: 5px;
-		width: 1px;
-		background: #ffffff25;
-	}
-	.timeline-marker {
-		border: 1px solid #ffffff40;
-		color: #c2d2cc;
-		width: 24px;
-		height: 24px;
-		border-radius: 50%;
-		font-size: 9px;
-		display: grid;
-		place-items: center;
-		flex-shrink: 0;
-	}
-	.done .timeline-marker {
-		background: var(--lime);
-		border-color: var(--lime);
-		color: var(--forest);
-	}
-	.timeline-item strong {
-		font-size: 11px;
-		font-weight: 500;
-	}
-	.timeline-item p {
-		color: #b9d1cc;
-		font-size: 9px;
-		margin: 7px 0 0;
-		line-height: 1.5;
-	}
-	.tip-card {
-		display: none;
-		background: var(--tip-surface);
-		border: 1px solid var(--tip-border);
-		border-radius: 12px;
-		padding: 24px;
-	}
-	.tip-icon {
-		color: var(--forest);
-	}
-	.tip-card h2 {
-		font-size: 18px;
-		font-weight: 600;
-		letter-spacing: -0.4px;
-		margin: 14px 0 10px;
-	}
-	.tip-card p {
-		font-size: 11px;
-		line-height: 1.9;
-		color: var(--tip-ink);
-		margin: 0;
-	}
-	.tip-line {
-		width: 28px;
-		height: 2px;
-		background: var(--tip-rule);
-		margin: 19px 0 12px;
-	}
-	.tip-card > span:last-child {
-		font-size: 9px;
-		color: var(--tip-ink);
-	}
-	.privacy-note {
-		display: flex;
-		gap: 10px;
 		color: var(--muted);
-		padding: 0 6px;
+		margin-inline-start: 5px;
 	}
-	.privacy-note :global(svg) {
-		flex-shrink: 0;
-		margin-top: 1px;
+	.daily-action {
+		width: 100%;
+		min-height: 48px;
+		justify-content: start;
+		font-size: 15px;
 	}
-	.privacy-note p {
-		font-size: 10px;
-		line-height: 1.8;
+	.daily-action :global(svg:last-child) {
+		margin-inline-start: auto;
+	}
+	.daily-complete,
+	.monthly-summary {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+	.daily-complete {
+		color: var(--primary);
+	}
+	.daily-complete h3 {
 		margin: 0;
+		font-size: 16px;
+	}
+	.monthly-summary {
+		justify-content: space-between;
+		margin-top: 16px;
+	}
+	.monthly-summary h2 {
+		font-size: 15px;
+	}
+	.monthly-summary strong {
+		white-space: nowrap;
+		font-size: 22px;
+	}
+	.monthly-summary strong span {
+		color: var(--muted);
+		font-size: 13px;
+	}
+	.mobile-install {
+		margin-top: 18px;
+	}
+	.mobile-navigation {
+		position: fixed;
+		inset: auto 0 0;
+		z-index: 25;
+		display: flex;
+		justify-content: center;
+		gap: 10px;
+		padding: 6px max(12px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+			max(12px, env(safe-area-inset-left));
+		background: var(--surface);
+		border-top: 1px solid var(--border);
+	}
+	.mobile-navigation a {
+		display: flex;
+		flex: 1;
+		max-width: 15rem;
+		min-height: 48px;
+		justify-content: center;
+		align-items: center;
+		gap: 8px;
+		border-radius: var(--control-radius);
+		background: var(--subtle);
+		color: var(--ink);
+		text-decoration: none;
+		font-size: 14px;
+		font-weight: 650;
 	}
 	.loading-card {
 		min-height: 460px;
@@ -829,56 +639,6 @@
 	.loading-card h2 {
 		color: var(--ink);
 		font-size: 18px;
-	}
-	.completed-card {
-		min-height: 390px;
-		padding: 40px 25px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		text-align: center;
-	}
-	.complete-symbol {
-		width: 86px;
-		height: 86px;
-		display: grid;
-		place-items: center;
-		background: var(--primary-soft);
-		color: var(--primary);
-		border-radius: 50%;
-		margin-bottom: 28px;
-	}
-	.completed-card h2 {
-		font-size: 32px;
-		letter-spacing: -1px;
-		margin: 8px 0 15px;
-	}
-	.completed-card > p {
-		font-size: 13px;
-		line-height: 1.9;
-		color: var(--muted);
-	}
-	.completed-duration {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 8px;
-		border: 1px solid var(--border);
-		border-radius: 9px;
-		padding: 17px;
-		margin: 20px 0;
-		color: var(--primary);
-		font-size: 14px;
-	}
-	.completed-duration span {
-		color: var(--muted);
-		font-size: 10px;
-	}
-	.completion-date {
-		color: var(--muted);
-		font-size: 10px;
 	}
 	.status-message {
 		display: flex;
@@ -918,55 +678,18 @@
 		main {
 			padding-top: 28px;
 		}
-		.page-heading {
-			margin-bottom: 29px;
-		}
-		.stats-grid {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-			gap: 14px;
-			margin-bottom: 26px;
-		}
-		.stat-card,
-		.stat-card:last-child {
-			padding: 17px 14px;
-			gap: 10px;
-		}
-		.stat-card:last-child {
-			grid-column: auto;
-			align-items: stretch;
-		}
-		.stat-card:last-child > div,
-		.stat-card:last-child div > span {
-			display: block;
-		}
-		.stat-card:last-child p {
-			margin-bottom: 11px;
-		}
-		.stat-icon {
+		.daily-action {
 			width: auto;
-			padding: 8px;
-			height: 36px;
-		}
-		.dashboard-grid {
-			grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-		}
-		.today-card,
-		.tip-card {
-			padding: 21px;
-		}
-		.tip-card {
-			display: block;
-		}
-		.live-clock {
-			font-size: 54px;
-			margin-top: 26px;
-		}
-		.completed-card {
-			min-height: 515px;
+			min-width: 14rem;
 		}
 		.page-footer {
 			flex-direction: row;
 			gap: 15px;
+		}
+	}
+	@media (max-width: 900px) {
+		.main-shell {
+			padding-bottom: calc(64px + env(safe-area-inset-bottom));
 		}
 	}
 	@media (min-width: 901px) {
@@ -982,7 +705,8 @@
 			width: calc(100% - var(--sidebar-width));
 		}
 		.mobile-logo,
-		.mobile-install {
+		.mobile-install,
+		.mobile-navigation {
 			display: none;
 		}
 		.desktop-breadcrumb,
@@ -1006,32 +730,6 @@
 		}
 		main {
 			padding-top: 35px;
-		}
-		.date-label {
-			display: flex;
-		}
-		.stats-grid {
-			gap: 17px;
-		}
-		.stat-card,
-		.stat-card:last-child {
-			padding: 21px;
-			gap: 15px;
-		}
-		.stat-icon {
-			padding: 11px;
-			height: 43px;
-		}
-		.stat-card strong {
-			font-size: 29px;
-		}
-		.dashboard-grid {
-			gap: 24px;
-			grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-		}
-		.today-card,
-		.tip-card {
-			padding: 25px;
 		}
 	}
 </style>

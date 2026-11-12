@@ -30,6 +30,7 @@
 	let exporting = $state(false);
 	let exportError = $state('');
 	let withPhotos = $state(false);
+	let expandedDays = $state<Record<string, boolean>>({});
 	let workbook = $state.raw<{ file: File; url: string; canShare: boolean }>();
 	let destroyed = false;
 	let photoDialog: HTMLDialogElement;
@@ -235,6 +236,34 @@
 	);
 </script>
 
+{#snippet photoActions(day: AttendanceDay)}
+	<div class="photo-actions">
+		<AttendanceThumbnail
+			{uid}
+			dateKey={day.dateKey}
+			kind="checkIn"
+			label={t('Lihat foto masuk {date}', { date: day.dateKey })}
+			title={t('Foto masuk')}
+			onopen={(source) => openPhoto(day, 'checkIn', source)}
+		/>
+		{#if day.checkOut}
+			<AttendanceThumbnail
+				{uid}
+				dateKey={day.dateKey}
+				kind="checkOut"
+				label={t('Lihat foto pulang {date}', { date: day.dateKey })}
+				title={t('Foto pulang')}
+				onopen={(source) => openPhoto(day, 'checkOut', source)}
+			/>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet dayNotes(day: AttendanceDay)}
+	{#if day.checkIn.note}<p><strong>{t('Masuk')}</strong> {day.checkIn.note}</p>{/if}
+	{#if day.checkOut?.note}<p><strong>{t('Pulang')}</strong> {day.checkOut.note}</p>{/if}
+{/snippet}
+
 <section id="riwayat" class="card history-card" aria-labelledby="history-title">
 	<div class="section-heading history-heading">
 		<div>
@@ -359,7 +388,57 @@
 					)}
 				</p>
 			{/if}
-		</div>{:else}<div class="table-scroll">
+		</div>{:else}
+		<div class="history-cards">
+			{#each currentPage.days as day (day.id)}
+				<details class="history-day" bind:open={expandedDays[day.id]}>
+					<summary>
+						<div class="history-day-heading">
+							<strong
+								>{formatDate(
+									dateFromKey(day.dateKey),
+									{ weekday: undefined, month: 'short' },
+									preferences.locale
+								)}</strong
+							>
+							<span class={['badge', { complete: day.checkOut }]}
+								>{day.checkOut ? t('Lengkap') : t('Sudah masuk')}</span
+							>
+						</div>
+						<div class="history-day-times">
+							<span
+								>{t('Jam masuk')}
+								<strong>{formatTime(day.checkIn.timestamp?.toDate(), preferences.locale)}</strong
+								></span
+							>
+							<span
+								>{t('Jam pulang')}
+								<strong>{formatTime(day.checkOut?.timestamp?.toDate(), preferences.locale)}</strong
+								></span
+							>
+						</div>
+						<span class="history-day-toggle"
+							>{expandedDays[day.id] ? t('Tutup detail') : t('Lihat foto dan catatan')}</span
+						>
+					</summary>
+					{#if expandedDays[day.id]}
+						<div class="history-day-details">
+							<p>
+								{t(WORK_MODES[day.checkIn.mode])} · {t('Durasi')}
+								{durationLabel(
+									day.checkIn.timestamp?.toDate(),
+									day.checkOut?.timestamp?.toDate(),
+									preferences.locale
+								)}
+							</p>
+							{@render photoActions(day)}
+							{@render dayNotes(day)}
+						</div>
+					{/if}
+				</details>
+			{/each}
+		</div>
+		<div class="table-scroll">
 			<table>
 				<thead
 					><tr
@@ -381,26 +460,7 @@
 									)}</strong
 								><small>{t(WORK_MODES[day.checkIn.mode])}</small></td
 							><td>
-								<div class="photo-actions">
-									<AttendanceThumbnail
-										{uid}
-										dateKey={day.dateKey}
-										kind="checkIn"
-										label={t('Lihat foto masuk {date}', { date: day.dateKey })}
-										title={t('Foto masuk')}
-										onopen={(source) => openPhoto(day, 'checkIn', source)}
-									/>
-									{#if day.checkOut}
-										<AttendanceThumbnail
-											{uid}
-											dateKey={day.dateKey}
-											kind="checkOut"
-											label={t('Lihat foto pulang {date}', { date: day.dateKey })}
-											title={t('Foto pulang')}
-											onopen={(source) => openPhoto(day, 'checkOut', source)}
-										/>
-									{/if}
-								</div>
+								{@render photoActions(day)}
 							</td><td>{formatTime(day.checkIn.timestamp?.toDate(), preferences.locale)}</td><td
 								>{formatTime(day.checkOut?.timestamp?.toDate(), preferences.locale)}</td
 							><td
@@ -415,15 +475,7 @@
 								></td
 							></tr
 						>{#if day.checkIn.note || day.checkOut?.note}<tr class="note-row"
-								><td colspan="6"
-									>{#if day.checkIn.note}<p>
-											<strong>{t('Masuk')}:</strong>
-											{day.checkIn.note}
-										</p>{/if}{#if day.checkOut?.note}<p>
-											<strong>{t('Pulang')}:</strong>
-											{day.checkOut.note}
-										</p>{/if}</td
-								></tr
+								><td colspan="6">{@render dayNotes(day)}</td></tr
 							>{/if}{/each}</tbody
 				>
 			</table>
@@ -578,7 +630,89 @@
 		background: var(--subtle);
 	}
 	.table-scroll {
+		display: none;
 		overflow-x: auto;
+	}
+	.history-cards {
+		display: grid;
+		gap: 12px;
+		padding: 14px var(--history-gutter) 18px;
+	}
+	.history-day {
+		border: 1px solid var(--border);
+		border-radius: var(--control-radius);
+		background: var(--subtle);
+	}
+	.history-day summary {
+		display: grid;
+		gap: 10px;
+		padding: 14px;
+		cursor: pointer;
+		list-style: none;
+	}
+	.history-day summary::-webkit-details-marker {
+		display: none;
+	}
+	.history-day summary:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
+	.history-day-heading,
+	.history-day-times {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px 12px;
+	}
+	.history-day-times span {
+		display: grid;
+		gap: 3px;
+		min-width: 90px;
+		color: var(--muted);
+		font-size: 13px;
+	}
+	.history-day-times strong {
+		color: var(--ink);
+		font-size: 16px;
+	}
+	.history-day-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: var(--primary);
+		font-size: 13px;
+		font-weight: 650;
+	}
+	.history-day-toggle::after {
+		content: '';
+		width: 7px;
+		height: 7px;
+		border: solid currentColor;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg);
+	}
+	.history-day[open] .history-day-toggle::after {
+		transform: rotate(225deg);
+	}
+	.history-day-details {
+		display: grid;
+		gap: 10px;
+		padding: 12px 14px 14px;
+		border-top: 1px solid var(--border);
+		font-size: 13px;
+		overflow-wrap: anywhere;
+	}
+	.history-day-details p {
+		margin: 0;
+	}
+	@media (min-width: 901px) {
+		.history-cards {
+			display: none;
+		}
+		.table-scroll {
+			display: block;
+		}
 	}
 	table {
 		border-collapse: collapse;
@@ -591,7 +725,7 @@
 		background: var(--subtle);
 		padding: 12px 18px;
 		color: var(--muted);
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 550;
 	}
 	td {

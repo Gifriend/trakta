@@ -20,6 +20,7 @@
 	let submitting = $state(false);
 	let error = $state('');
 	let cameraActive = $state(false);
+	let picker: { openCamera: () => Promise<void> };
 	let selectionVersion = 0;
 
 	async function choosePhoto(file: File) {
@@ -37,7 +38,7 @@
 	}
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (submitting || processing || cameraActive) return;
+		if (!online || submitting || processing || cameraActive) return;
 		if (!photo) {
 			error = 'Tambahkan foto untuk melengkapi presensimu.';
 			return;
@@ -55,26 +56,40 @@
 			submitting = false;
 		}
 	}
+	function retake() {
+		void picker.openCamera();
+		document.getElementById('photo-step')?.scrollIntoView({ block: 'start' });
+	}
 	const preferences = getPreferences();
 	const { t } = preferences;
 </script>
 
-<section class="card attendance-form" aria-labelledby="attendance-title">
+<section id="attendance-form" class="card attendance-form" aria-labelledby="attendance-title">
 	<div class="section-heading">
 		<div>
-			<div class="section-kicker">{t('LANGKAH KECIL, KOMITMEN BESAR')}</div>
-			<h2 id="attendance-title">
+			<h2 id="attendance-title" tabindex="-1">
 				{t(kind === 'checkIn' ? 'Catat presensi masuk' : 'Catat presensi pulang')}
 			</h2>
 		</div>
 		<span class="icon-tile"><Icon name={kind === 'checkIn' ? 'enter' : 'exit'} size={22} /></span>
 	</div>
-	<p class="section-description">
-		{kind === 'checkIn'
-			? t('Siap memulai hari? Lengkapi presensimu di bawah ini.')
-			: t('Terima kasih untuk hari ini. Catat waktu pulangmu.')}
-	</p>
 	<form onsubmit={submit}>
+		<div id="photo-step" class="photo-step">
+			<label for="photo">
+				{t(photo && !cameraActive ? 'Cek foto presensi' : 'Foto presensi')}
+				<span class="required">*</span>
+			</label>
+			<PhotoPicker
+				bind:this={picker}
+				{photo}
+				{processing}
+				disabled={submitting}
+				onselect={choosePhoto}
+				onactivechange={(active) => {
+					cameraActive = active;
+				}}
+			/>
+		</div>
 		<fieldset disabled={submitting || processing}>
 			<legend>{t('Lokasi kerja')}</legend>
 			<div class="mode-options">
@@ -84,16 +99,6 @@
 					>{/each}
 			</div>
 		</fieldset>
-		<label for="photo">{t('Foto presensi')} <span class="required">*</span></label>
-		<PhotoPicker
-			{photo}
-			{processing}
-			disabled={submitting}
-			onselect={choosePhoto}
-			onactivechange={(active) => {
-				cameraActive = active;
-			}}
-		/>
 		<label for="note">{t('Catatan')} <span class="optional">{t('(opsional)')}</span></label
 		><textarea
 			id="note"
@@ -105,22 +110,38 @@
 				? t('Apa yang akan kamu kerjakan hari ini?')
 				: t('Ada pencapaian yang ingin dicatat?')}></textarea>
 		<div class="character-count">{note.length}/300</div>
-		{#if error}<p class="notice error" role="alert">{t(error)}</p>{/if}
+		{#if error}<p class="notice error" role="alert">
+				{t(error)}
+				{#if photo}{t('Foto dan catatan masih tersedia di formulir ini.')}{/if}
+			</p>{/if}
 		{#if !online}<p class="notice" role="status">
 				{t('Kamu sedang offline. Hubungkan internet untuk mengirim presensi.')}
+				{#if photo}{t('Foto dan catatan masih tersedia di formulir ini.')}{/if}
 			</p>{/if}
-		<button
-			type="submit"
-			class="button primary submit-attendance"
-			disabled={!online || processing || submitting || cameraActive || !photo}
-			>{t(
-				submitting
-					? 'Mengirim presensi…'
-					: kind === 'checkIn'
-						? 'Konfirmasi masuk'
-						: 'Konfirmasi pulang'
-			)}<Icon name="arrow" size={18} /></button
-		>
+		<div class="confirm-actions">
+			{#if photo && !cameraActive}
+				<button
+					type="button"
+					class="button secondary"
+					disabled={processing || submitting}
+					onclick={retake}
+				>
+					<Icon name="camera" size={17} />{t('Ambil ulang')}
+				</button>
+			{/if}
+			<button
+				type="submit"
+				class="button primary submit-attendance"
+				disabled={!online || processing || submitting || cameraActive || !photo}
+				>{t(
+					submitting
+						? 'Mengirim presensi…'
+						: kind === 'checkIn'
+							? 'Konfirmasi masuk'
+							: 'Konfirmasi pulang'
+				)}<Icon name="arrow" size={18} /></button
+			>
+		</div>
 		<p class="timestamp-note">
 			<Icon name="shield" size={13} />
 			{t('Waktu tercatat otomatis saat presensi diterima server.')}
@@ -132,22 +153,16 @@
 	.attendance-form {
 		padding: 27px;
 	}
-	.section-kicker {
-		font-size: 9px;
-		font-weight: 700;
-		letter-spacing: 1.2px;
-		color: var(--muted);
-		margin-bottom: 9px;
-	}
 	h2 {
 		font-size: 21px;
 		letter-spacing: -0.5px;
 	}
-	.section-description {
-		font-size: 12px;
-		color: var(--muted);
-		margin: 10px 0 24px;
-		line-height: 1.7;
+	.photo-step {
+		margin: 18px 0 22px;
+	}
+	.photo-step > label,
+	label[for='note'] {
+		font-size: 14px;
 	}
 	.icon-tile {
 		background: var(--primary-soft);
@@ -163,7 +178,7 @@
 	}
 	legend {
 		font-weight: 600;
-		font-size: 12px;
+		font-size: 14px;
 		margin-bottom: 10px;
 	}
 	.mode-options {
@@ -177,7 +192,7 @@
 		border-radius: 7px;
 		padding: 12px 8px;
 		text-align: center;
-		font-size: 11px;
+		font-size: 13px;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -216,17 +231,26 @@
 		font-size: 10px;
 		margin-top: 4px;
 	}
-	.submit-attendance {
-		justify-content: space-between;
-		width: 100%;
+	.confirm-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
 		margin-top: 15px;
+	}
+	.confirm-actions .button {
+		min-height: 48px;
+		font-size: 13px;
+	}
+	.submit-attendance {
+		flex: 1 1 9rem;
+		justify-content: space-between;
 	}
 	.timestamp-note {
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		gap: 5px;
-		font-size: 10px;
+		font-size: 12px;
 		color: var(--muted);
 		margin: 13px 0 0;
 		text-align: center;
@@ -240,14 +264,9 @@
 		.attendance-form {
 			padding: 20px;
 		}
-		.mode-options {
-			gap: 5px;
-		}
 		.mode-options label {
-			font-size: 10px;
-		}
-		.timestamp-note {
-			font-size: 9px;
+			flex-wrap: wrap;
+			padding-inline: 5px;
 		}
 	}
 </style>
