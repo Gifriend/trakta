@@ -1,22 +1,42 @@
 import 'dart:typed_data';
 
 enum WorkMode {
-  office('Di kantor'), remote('Dari rumah'), field('Dinas luar');
+  office('Di kantor'),
+  remote('Dari rumah'),
+  field('Dinas luar');
+
   const WorkMode(this.label);
   final String label;
 }
+
 enum AttendanceKind { checkIn, checkOut }
+
 enum PhotoSource { camera, gallery }
 
 class PhotoLocation {
-  const PhotoLocation({required this.latitude, required this.longitude, required this.accuracy, required this.source});
+  const PhotoLocation({
+    required this.latitude,
+    required this.longitude,
+    required this.accuracy,
+    required this.source,
+  });
   final double latitude, longitude, accuracy;
   final PhotoSource source;
-  Map<String, dynamic> toMap() => {'latitude': latitude, 'longitude': longitude, 'accuracy': accuracy, 'source': source.name};
+  Map<String, dynamic> toMap() => {
+    'latitude': latitude,
+    'longitude': longitude,
+    'accuracy': accuracy,
+    'source': source.name,
+  };
 }
 
 class AttendanceEvent {
-  const AttendanceEvent({required this.timestamp, required this.mode, required this.note, this.photoLocation});
+  const AttendanceEvent({
+    required this.timestamp,
+    required this.mode,
+    required this.note,
+    this.photoLocation,
+  });
   final DateTime timestamp;
   final WorkMode mode;
   final String note;
@@ -24,7 +44,11 @@ class AttendanceEvent {
 }
 
 class AttendanceDay {
-  const AttendanceDay({required this.dateKey, required this.checkIn, this.checkOut});
+  const AttendanceDay({
+    required this.dateKey,
+    required this.checkIn,
+    this.checkOut,
+  });
   final String dateKey;
   final AttendanceEvent checkIn;
   final AttendanceEvent? checkOut;
