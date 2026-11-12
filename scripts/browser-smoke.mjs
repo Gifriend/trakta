@@ -69,6 +69,8 @@ try {
 		['glass', 'rgb(229, 236, 255)', 'rgb(16, 22, 45)'],
 		['clay', 'rgb(246, 233, 236)', 'rgb(33, 25, 37)'],
 		['swiss', 'rgb(246, 246, 243)', 'rgb(20, 20, 20)'],
+		['studio', 'rgb(255, 240, 237)', 'rgb(38, 24, 34)'],
+		['lagoon', 'rgb(232, 244, 245)', 'rgb(17, 36, 41)'],
 		['deco', 'rgb(239, 232, 216)', 'rgb(22, 21, 19)']
 	]) {
 		await themePicker.selectOption(theme);
@@ -275,7 +277,7 @@ try {
 	);
 	await mobileNav.getByRole('link', { name: 'Today', exact: true }).click();
 	await mobileNav.locator('a[href="#ringkasan"][aria-current="location"]').waitFor();
-	for (const theme of ['glass', 'clay', 'swiss', 'deco']) {
+	for (const theme of ['glass', 'clay', 'swiss', 'deco', 'studio', 'lagoon']) {
 		await settingsButton('Settings').click();
 		await themePicker.selectOption(theme);
 		await settings('Settings').getByRole('button', { name: 'Close settings' }).click();
@@ -431,6 +433,16 @@ try {
 			await page.evaluate(() => {
 				window.__cameraTestStream = document.querySelector('video').srcObject;
 			});
+			await combo('Bingkai fotobox').selectOption('love');
+			await page.waitForFunction(() => {
+				const canvas = document.querySelector('.live-frame');
+				if (!canvas) return false;
+				const unit = Math.min(canvas.width, canvas.height) / 100;
+				const [red, , , alpha] = canvas
+					.getContext('2d')
+					.getImageData(canvas.width - Math.round(9 * unit), Math.round(9 * unit), 1, 1).data;
+				return red === 255 && alpha === 255;
+			});
 			await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
 			await page.getByAltText('Pratinjau foto presensi yang akan dikirim').waitFor();
 			assert.equal(
@@ -459,6 +471,68 @@ try {
 			});
 		}
 		await page.getByAltText('Pratinjau foto presensi yang akan dikirim').waitFor();
+		const attendanceViewport = page.viewportSize();
+		if (kind === 'pulang') await page.setViewportSize({ width: 375, height: 812 });
+		const edit = page.getByRole('button', { name: 'Edit foto', exact: true });
+		const editor = page.getByRole('dialog', { name: 'Edit foto', exact: true });
+		await edit.click();
+		const frames = editor.getByRole('combobox', { name: 'Bingkai fotobox', exact: true });
+		await frames.waitFor();
+		assert.equal(await frames.inputValue(), kind === 'masuk' ? 'love' : 'none');
+		await editor.getByRole('button', { name: 'Sebelum', exact: true }).click();
+		const originalSource = await editor.getByAltText('Foto asli').getAttribute('src');
+		const draftSource = await captured.getAttribute('src');
+		if (kind === 'masuk') {
+			assert.notEqual(
+				draftSource,
+				originalSource,
+				'Live Love frame is saved in the check-in draft'
+			);
+			await page.keyboard.press('Escape');
+			await editor.waitFor({ state: 'hidden' });
+			assert.equal(await captured.getAttribute('src'), draftSource);
+		} else {
+			assert.equal(draftSource, originalSource);
+			await frames.selectOption('retro');
+			await editor.getByRole('button', { name: 'Putar 90°', exact: true }).click();
+			await editor.getByLabel('Potong persegi', { exact: true }).check();
+			assert.equal(
+				await editor
+					.getByRole('button', { name: 'Sesudah', exact: true })
+					.getAttribute('aria-pressed'),
+				'true'
+			);
+			assert.ok(
+				await editor.evaluate((dialog) => {
+					const { x, y, right, bottom } = dialog.getBoundingClientRect();
+					return (
+						x >= 0 &&
+						y >= 0 &&
+						right <= innerWidth &&
+						bottom <= innerHeight &&
+						dialog.scrollWidth <= dialog.clientWidth
+					);
+				}),
+				'Editor fits a narrow phone viewport'
+			);
+			await page.screenshot({ path: 'test-results/editor-mobile.png' });
+			await editor.getByRole('button', { name: 'Gunakan foto', exact: true }).click();
+			await editor.waitFor({ state: 'hidden' });
+			assert.notEqual(await captured.getAttribute('src'), originalSource);
+			assert.ok(
+				await captured.evaluate(async (img) => {
+					await img.decode();
+					return img.naturalWidth === img.naturalHeight;
+				})
+			);
+			await edit.click();
+			assert.equal(await frames.inputValue(), 'retro');
+			await editor.getByRole('button', { name: 'Sebelum', exact: true }).click();
+			assert.equal(await editor.getByAltText('Foto asli').getAttribute('src'), originalSource);
+			await editor.getByRole('button', { name: 'Batal', exact: true }).click();
+			await editor.waitFor({ state: 'hidden' });
+			await page.setViewportSize(attendanceViewport);
+		}
 		const bytes = await page
 			.getByAltText('Pratinjau foto presensi yang akan dikirim')
 			.evaluate((img) => atob(img.src.split(',')[1]).length);
