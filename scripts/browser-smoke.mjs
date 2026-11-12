@@ -24,7 +24,8 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext({
 	viewport: { width: 1440, height: 1100 },
-	permissions: ['camera']
+	permissions: ['camera', 'geolocation'],
+	geolocation: { latitude: -6.2517753, longitude: 106.8422473, accuracy: 12 }
 });
 const page = await context.newPage();
 const combo = (name) => page.getByRole('combobox', { name, exact: true });
@@ -395,6 +396,7 @@ try {
 		true
 	);
 	await page.setViewportSize({ width: 1440, height: 1100 });
+	await page.getByRole('radio', { name: 'Dari rumah', exact: true }).check();
 	await page
 		.getByLabel('Pilih atau ambil foto presensi')
 		.setInputFiles({ name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from('invalid') });
@@ -428,8 +430,13 @@ try {
 			await page.getByRole('button', { name: 'Presensi pulang', exact: true }).click();
 		await page.getByRole('heading', { name: `Catat presensi ${kind}` }).waitFor();
 		if (kind === 'masuk') {
+			await page.getByRole('radio', { name: 'Di kantor', exact: true }).check();
 			await retake.click();
 			await page.waitForFunction(() => document.querySelector('video')?.readyState >= 2);
+			await context.setGeolocation({ latitude: -7, longitude: 106.8422473, accuracy: 12 });
+			await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
+			await page.getByRole('alert').filter({ hasText: 'di luar radius 150 m' }).waitFor();
+			await context.setGeolocation({ latitude: -6.2517753, longitude: 106.8422473, accuracy: 12 });
 			await page.evaluate(() => {
 				window.__cameraTestStream = document.querySelector('video').srcObject;
 			});
@@ -452,6 +459,8 @@ try {
 				true
 			);
 		} else {
+			await page.getByRole('radio', { name: 'Dari rumah', exact: true }).check();
+			await context.setGeolocation({ latitude: -6.9, longitude: 107.6, accuracy: 20 });
 			await page.getByRole('button', { name: 'Tutup kamera' }).click();
 			await page.evaluate(() => {
 				window.__originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(
@@ -727,6 +736,9 @@ try {
 	assert.equal(await historyCard.getByRole('button', { name: /Lihat foto masuk/ }).count(), 0);
 	await historyCard.getByText('Lihat foto dan catatan', { exact: true }).click();
 	await historyCard.getByText('Catatan masuk dari browser test').waitFor();
+	await historyCard.getByText('Lokasi foto masuk', { exact: true }).waitFor();
+	await historyCard.getByText('Lokasi foto pulang', { exact: true }).waitFor();
+	await historyCard.getByText(/-6\.900000, 107\.600000/).waitFor();
 	const checkInPhoto = historyCard.getByRole('button', { name: /Lihat foto masuk/ });
 	await checkInPhoto.scrollIntoViewIfNeeded();
 	const thumbnail = checkInPhoto.locator('img');

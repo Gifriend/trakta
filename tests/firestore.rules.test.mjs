@@ -34,7 +34,18 @@ const key = () =>
 		.map((p) => p.value)
 		.join('');
 const day = (db, uid = 'alice', date = key()) => doc(db, 'users', uid, 'attendance', date);
-const event = () => ({ timestamp: serverTimestamp(), mode: 'office', note: 'Daily work' });
+const officeLocation = {
+	latitude: -6.2517753,
+	longitude: 106.8422473,
+	accuracy: 12,
+	source: 'camera'
+};
+const event = () => ({
+	timestamp: serverTimestamp(),
+	mode: 'office',
+	note: 'Daily work',
+	photoLocation: officeLocation
+});
 const photo = (bytes = 3) => ({
 	base64: Buffer.alloc(bytes).toString('base64'),
 	bytes,
@@ -118,4 +129,26 @@ test('invalid modes, extra fields, and oversized notes are rejected', async () =
 	await assertFails(record(db, 'checkIn', { event: { mode: 'fake' } }));
 	await assertFails(record(db, 'checkIn', { event: { note: 'x'.repeat(301) } }));
 	await assertFails(record(db, 'checkIn', { event: { admin: true } }));
+});
+
+test('office photos require a precise camera location within the office radius', async () => {
+	const db = env.authenticatedContext('alice').firestore();
+	for (const photoLocation of [
+		null,
+		{ ...officeLocation, latitude: officeLocation.latitude + 0.0014 },
+		{ ...officeLocation, accuracy: 101 },
+		{ ...officeLocation, source: 'gallery' }
+	]) {
+		await assertFails(record(db, 'checkIn', { event: { photoLocation } }));
+	}
+	await assertSucceeds(
+		record(db, 'checkIn', {
+			event: { photoLocation: { ...officeLocation, latitude: officeLocation.latitude + 0.0013 } }
+		})
+	);
+	const remoteLocation = { ...officeLocation, latitude: -7, source: 'gallery' };
+	await assertFails(record(db, 'checkOut', { event: { photoLocation: remoteLocation } }));
+	await assertSucceeds(
+		record(db, 'checkOut', { event: { mode: 'remote', photoLocation: remoteLocation } })
+	);
 });
