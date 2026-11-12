@@ -149,6 +149,9 @@ void main() {
     await tester.tap(find.text('Riwayat'));
     await tester.pumpAndSettle();
     expect(find.text('Ekspor Excel'), findsOneWidget);
+      expect(find.byTooltip('Pengaturan'), findsOneWidget);
+      expect(tester.getTopLeft(find.byTooltip('Pengaturan')).dy, lessThan(60));
+      expect(tester.getTopLeft(find.text('Riwayat presensi')).dy, greaterThan(56));
     expect(find.text('Sertakan foto di Excel'), findsOneWidget);
     await screenshot(tester, 'history');
     await tester.tap(find.text('Hari ini'));

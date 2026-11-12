@@ -36,11 +36,12 @@ class CaptureController extends StateNotifier<CameraState> {
   CameraController? get preview => _repository.controller;
   Future<void> open({bool clearError = true}) {
     final generation = ++_generation;
-    if (mounted)
+    if (mounted) {
       state = state.copyWith(
         ready: false,
         error: clearError ? null : state.error,
       );
+    }
     _queue = _queue.then((_) async {
       await _repository.close();
       if (!mounted || generation != _generation) return;
