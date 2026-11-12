@@ -3,10 +3,17 @@
 	import type { AttendanceKind, CompressedPhoto, WorkMode } from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
 	import { compressPhoto } from '#lib/utils/image.ts';
+	import {
+		DEFAULT_PHOTO_EDITS,
+		decodePhoto,
+		saveEditedPhoto,
+		type PhotoEdits
+	} from '#lib/utils/photo-editor.ts';
 	import { submitAttendance } from '#lib/firebase/attendance.ts';
 	import { friendlyError } from '#lib/firebase/auth.ts';
 	import Icon from './Icon.svelte';
 	import PhotoPicker from './PhotoPicker.svelte';
+	import PhotoEditor from './PhotoEditor.svelte';
 	let {
 		uid,
 		kind,
@@ -16,6 +23,9 @@
 	let mode = $state<WorkMode>('office');
 	let note = $state('');
 	let photo = $state.raw<CompressedPhoto | null>(null);
+	let originalPhoto = $state.raw<CompressedPhoto | null>(null);
+	let photoEdits = $state.raw(DEFAULT_PHOTO_EDITS);
+	let editing = $state(false);
 	let processing = $state(false);
 	let submitting = $state(false);
 	let error = $state('');
@@ -23,13 +33,21 @@
 	let picker: { openCamera: () => Promise<void>; stopCamera: () => void };
 	let selectionVersion = 0;
 
-	async function choosePhoto(file: File) {
+	async function choosePhoto(file: File, frame: PhotoEdits['frame'] = 'none') {
 		const version = ++selectionVersion;
 		error = '';
 		processing = true;
 		try {
 			const result = await compressPhoto(file);
-			if (version === selectionVersion) photo = result;
+			if (version !== selectionVersion) return;
+			originalPhoto = result;
+			photo = result;
+			photoEdits = DEFAULT_PHOTO_EDITS;
+			if (frame !== 'none') {
+				const edits = { ...DEFAULT_PHOTO_EDITS, frame };
+				const edited = await saveEditedPhoto(await decodePhoto(result.dataUrl), edits);
+				if (version === selectionVersion) applyPhoto(edited, edits);
+			}
 		} catch (cause) {
 			if (version === selectionVersion) error = friendlyError(cause);
 		} finally {
@@ -38,7 +56,7 @@
 	}
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (!online || submitting || processing || cameraActive) return;
+		if (!online || submitting || processing || cameraActive || editing) return;
 		if (!photo) {
 			error = 'Tambahkan foto untuk melengkapi presensimu.';
 			return;
@@ -48,6 +66,7 @@
 		try {
 			await submitAttendance({ uid, kind, mode, note, photo });
 			photo = null;
+			originalPhoto = null;
 			note = '';
 			onsuccess();
 		} catch (cause) {
@@ -55,6 +74,11 @@
 		} finally {
 			submitting = false;
 		}
+	}
+	function applyPhoto(edited: CompressedPhoto, edits: PhotoEdits) {
+		photo = edited;
+		photoEdits = edits;
+		error = '';
 	}
 	function retake() {
 		void picker.openCamera();
@@ -93,9 +117,18 @@
 				}}
 			/>
 			{#if photo && !cameraActive && !processing}
-				<p class="photo-ready" role="status">
-					<Icon name="check" size={16} />{t('Foto siap dikirim.')}
-				</p>
+				<div class="photo-actions">
+					<p class="photo-ready" role="status">
+						<Icon name="check" size={16} />{t('Foto siap dikirim.')}
+					</p>
+					<button
+						type="button"
+						class="button secondary"
+						aria-haspopup="dialog"
+						disabled={submitting}
+						onclick={() => (editing = true)}>{t('Edit foto')}</button
+					>
+				</div>
 			{/if}
 		</div>
 		<fieldset disabled={submitting || processing}>
@@ -157,6 +190,15 @@
 	</form>
 </section>
 
+{#if editing && originalPhoto}
+	<PhotoEditor
+		original={originalPhoto}
+		initialEdits={photoEdits}
+		onapply={applyPhoto}
+		onclose={() => (editing = false)}
+	/>
+{/if}
+
 <style>
 	.attendance-form {
 		padding: 27px;
@@ -168,11 +210,19 @@
 	.photo-step {
 		margin: 18px 0 22px;
 	}
+	.photo-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		margin-top: 8px;
+	}
 	.photo-ready {
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		margin: 10px 0 0;
+		margin: 0;
 		color: var(--primary);
 		font-size: 13px;
 	}

@@ -3,7 +3,9 @@
 	import { onMount, tick } from 'svelte';
 	import type { CompressedPhoto } from '#lib/types/attendance.ts';
 	import { CAMERA_EFFECTS, drawCameraFrame } from '#lib/utils/camera.ts';
+	import { drawPhotoFrame, type PhotoEdits } from '#lib/utils/photo-editor.ts';
 	import CameraEffectSelect from './CameraEffectSelect.svelte';
+	import PhotoFrameSelect from './PhotoFrameSelect.svelte';
 	import Icon from './Icon.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 
@@ -17,13 +19,15 @@
 		photo: CompressedPhoto | null;
 		processing: boolean;
 		disabled: boolean;
-		onselect: (file: File) => Promise<void>;
+		onselect: (file: File, frame?: PhotoEdits['frame']) => Promise<void>;
 		onactivechange: (active: boolean) => void;
 	} = $props();
 
 	let cameraState = $state<'closed' | 'starting' | 'live'>('closed');
 	let cameraError = $state('');
-	let frameReady = $state(false);
+	let frameSize = $state.raw<{ width: number; height: number }>();
+	let cameraFrame = $state<PhotoEdits['frame']>('none');
+	let frameOverlay = $state<HTMLCanvasElement>();
 	let taking = $state(false);
 	let correctMirroring = $state(false);
 	let video = $state<HTMLVideoElement>();
@@ -33,13 +37,26 @@
 	let requestVersion = 0;
 	let destroyed = false;
 
+	$effect(() => {
+		if (!frameOverlay || !frameSize) return;
+		frameOverlay.width = frameSize.width;
+		frameOverlay.height = frameSize.height;
+		const context = frameOverlay.getContext('2d');
+		if (context) drawPhotoFrame(context, cameraFrame);
+	});
+
+	function updateFrameSize(element: HTMLVideoElement) {
+		const { videoWidth: width, videoHeight: height } = element;
+		frameSize = width && height ? { width, height } : undefined;
+	}
+
 	export function stopCamera() {
 		requestVersion++;
 		stream?.getTracks().forEach((track) => track.stop());
 		stream = undefined;
 		if (video) video.srcObject = null;
 		cameraState = 'closed';
-		frameReady = false;
+		frameSize = undefined;
 		onactivechange(false);
 	}
 
@@ -98,7 +115,7 @@
 			await video.play();
 			if (version !== requestVersion) return;
 			cameraState = 'live';
-			frameReady = video.videoWidth > 0 && video.videoHeight > 0;
+			updateFrameSize(video);
 		} catch (cause) {
 			if (version !== requestVersion || destroyed) return;
 			stopCamera();
@@ -116,7 +133,7 @@
 	}
 
 	async function takePhoto() {
-		if (!video || !frameReady || disabled || processing || taking) return;
+		if (!video || !frameSize || disabled || processing || taking) return;
 		taking = true;
 		cameraError = '';
 		const version = requestVersion;
@@ -136,7 +153,10 @@
 			});
 			if (version !== requestVersion || destroyed) return;
 			stopCamera();
-			await onselect(new File([blob], `presensi-kamera-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+			await onselect(
+				new File([blob], `presensi-kamera-${Date.now()}.jpg`, { type: 'image/jpeg' }),
+				cameraFrame
+			);
 		} catch {
 			if (!destroyed && version === requestVersion)
 				cameraError = 'Foto belum berhasil diambil. Coba lagi atau pilih galeri/file.';
@@ -197,10 +217,12 @@
 				class:corrected={correctMirroring}
 				style:filter={CAMERA_EFFECTS[preferences.cameraEffect].filter}
 				aria-label={t('Pratinjau kamera presensi')}
-				onloadeddata={(event) => {
-					frameReady = event.currentTarget.videoWidth > 0 && event.currentTarget.videoHeight > 0;
-				}}
+				onloadeddata={(event) => updateFrameSize(event.currentTarget)}
+				onresize={(event) => updateFrameSize(event.currentTarget)}
 			></video>
+			{#if cameraState === 'live' && cameraFrame !== 'none' && frameSize}
+				<canvas bind:this={frameOverlay} class="live-frame" aria-hidden="true"></canvas>
+			{/if}
 			<button
 				type="button"
 				class="icon-button close-camera"
@@ -217,7 +239,7 @@
 			<button
 				type="button"
 				class="button primary shutter"
-				disabled={!frameReady || cameraState !== 'live' || disabled || processing || taking}
+				disabled={!frameSize || cameraState !== 'live' || disabled || processing || taking}
 				onclick={takePhoto}
 				><Icon name="camera" size={18} />{taking
 					? t('Mengambil foto kamera…')
@@ -242,6 +264,11 @@
 	{#if cameraState === 'live'}
 		<div class="camera-effect">
 			<CameraEffectSelect disabled={disabled || taking} />
+			<PhotoFrameSelect
+				frame={cameraFrame}
+				disabled={disabled || taking}
+				onchange={(frame) => (cameraFrame = frame)}
+			/>
 		</div>
 		<div class="camera-orientation">
 			<label>
@@ -355,6 +382,14 @@
 	video.corrected {
 		transform: scaleX(-1);
 	}
+	.live-frame {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		pointer-events: none;
+	}
 	.close-camera {
 		position: absolute;
 		top: 10px;
@@ -384,6 +419,8 @@
 		pointer-events: none;
 	}
 	.camera-effect {
+		display: grid;
+		gap: 6px;
 		margin-top: 14px;
 	}
 	.camera-effect :global(.preference-control) {
