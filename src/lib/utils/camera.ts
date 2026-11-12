@@ -18,11 +18,20 @@ function contrastEffect(label: string, amount: number) {
 }
 
 const brightness = 1.18;
-const saturation = 1.45;
+const lowLightBrightness = 1.4;
 const gray: ColorRow = [0.2126, 0.7152, 0.0722];
-const saturationRed = 0.213 * (1 - saturation);
-const saturationGreen = 0.715 * (1 - saturation);
-const saturationBlue = 0.072 * (1 - saturation);
+
+function saturationEffect(label: string, amount: number) {
+	const red = 0.213 * (1 - amount);
+	const green = 0.715 * (1 - amount);
+	const blue = 0.072 * (1 - amount);
+	const matrix: ColorMatrix = [
+		[red + amount, green, blue],
+		[red, green + amount, blue],
+		[red, green, blue + amount]
+	];
+	return { label, filter: `saturate(${amount})`, matrix };
+}
 
 export const CAMERA_EFFECTS = {
 	natural: { label: 'Natural', filter: 'none', matrix: null },
@@ -41,17 +50,16 @@ export const CAMERA_EFFECTS = {
 			[0.272, 0.534, 0.131]
 		]
 	},
-	vivid: {
-		label: 'Warna hidup',
-		filter: `saturate(${saturation})`,
-		matrix: [
-			[saturationRed + saturation, saturationGreen, saturationBlue],
-			[saturationRed, saturationGreen + saturation, saturationBlue],
-			[saturationRed, saturationGreen, saturationBlue + saturation]
-		]
-	},
+	vivid: saturationEffect('Warna hidup', 1.45),
 	contrast: contrastEffect('Kontras tinggi', 1.3),
-	soft: contrastEffect('Lembut', 0.8)
+	soft: contrastEffect('Lembut', 0.8),
+	lowLight: {
+		label: 'Cahaya rendah',
+		filter: `brightness(${lowLightBrightness})`,
+		matrix: channelMatrix(lowLightBrightness)
+	},
+	muted: saturationEffect('Warna redup', 0.55),
+	negative: { label: 'Negatif', filter: 'invert(1)', matrix: channelMatrix(-1, 255) }
 } satisfies Record<string, { label: string; filter: string; matrix: ColorMatrix | null }>;
 
 export type CameraEffect = keyof typeof CAMERA_EFFECTS;

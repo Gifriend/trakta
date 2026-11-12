@@ -386,17 +386,17 @@
 		pointer-events: none;
 	}
 	.camera-effect {
-		display: none;
-		margin-top: 10px;
+		margin-top: 14px;
 	}
-	@media (min-width: 901px) {
-		.camera-effect {
-			display: block;
-		}
-		.camera-effect :global(.preference-control) {
-			flex-wrap: wrap;
-			justify-content: space-between;
-		}
+	.camera-effect :global(.preference-control) {
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 10px;
+	}
+	.camera-effect :global(select) {
+		flex: 1 1 9rem;
+		max-width: 14rem;
+		font-size: 16px;
 	}
 	.camera-orientation {
 		margin-top: 4px;
