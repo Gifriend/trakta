@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { getPreferences } from '#lib/preferences.ts';
 	import type { AttendanceDay, AttendanceKind } from '#lib/types/attendance.ts';
 	import { WORK_MODES } from '#lib/types/attendance.ts';
@@ -7,11 +8,11 @@
 		ATTENDANCE_PAGE_SIZE,
 		loadAttendanceForExport,
 		loadAttendancePage,
-		loadPhoto,
 		type AttendanceRange
 	} from '#lib/firebase/attendance.ts';
 	import { friendlyError } from '#lib/firebase/auth.ts';
 	import Icon from './Icon.svelte';
+	import AttendanceThumbnail from './AttendanceThumbnail.svelte';
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	let { days, uid, loading }: { days: AttendanceDay[]; uid: string; loading: boolean } = $props();
 	type HistoryPage = Awaited<ReturnType<typeof loadAttendancePage>>;
@@ -29,6 +30,8 @@
 	let exporting = $state(false);
 	let exportError = $state('');
 	let withPhotos = $state(false);
+	let workbook = $state.raw<{ file: File; url: string; canShare: boolean }>();
+	let destroyed = false;
 	let photoDialog: HTMLDialogElement;
 	let activeRequest = 0;
 	const firstPage = $derived.by(() => {
@@ -68,6 +71,7 @@
 		navigation = undefined;
 		pageError = '';
 		exportError = '';
+		clearWorkbook();
 	}
 
 	async function applyFilter(event: SubmitEvent) {
@@ -92,10 +96,33 @@
 			const page = await loadAttendancePage(uid, range);
 			appliedFilter = { range, page };
 			navigation = undefined;
+			clearWorkbook();
 		} catch {
 			pageError = 'Filter tanggal gagal dimuat. Periksa koneksi lalu coba lagi.';
 		} finally {
 			loadingPage = false;
+		}
+	}
+
+	function clearWorkbook() {
+		if (workbook) URL.revokeObjectURL(workbook.url);
+		workbook = undefined;
+	}
+
+	onDestroy(() => {
+		destroyed = true;
+		clearWorkbook();
+	});
+
+	async function shareWorkbook() {
+		if (!workbook?.canShare) return;
+		exportError = '';
+		try {
+			await navigator.share({ files: [workbook.file] });
+		} catch (cause) {
+			if (!(cause instanceof DOMException && cause.name === 'AbortError')) {
+				exportError = 'Excel belum bisa dibagikan. Gunakan Unduh Excel.';
+			}
 		}
 	}
 
@@ -132,6 +159,7 @@
 	async function exportExcel() {
 		if (exporting || loadingPage || !currentPage.days.length) return;
 		exportError = '';
+		clearWorkbook();
 		if (!navigator.onLine) {
 			exportError = 'Hubungkan internet untuk mengunduh seluruh riwayat presensi.';
 			return;
@@ -140,12 +168,24 @@
 		const { locale } = preferences;
 		const includePhotos = withPhotos;
 		try {
-			const [{ downloadAttendanceWorkbook }, records] = await Promise.all([
+			const [{ createAttendanceWorkbook }, records] = await Promise.all([
 				import('#lib/utils/attendance-excel.ts'),
 				loadAttendanceForExport(uid, appliedFilter?.range)
 			]);
 			if (records.length) {
-				await downloadAttendanceWorkbook(records, locale, includePhotos ? uid : undefined);
+				const file = await createAttendanceWorkbook(
+					records,
+					locale,
+					includePhotos ? uid : undefined
+				);
+				if (destroyed) return;
+				workbook = {
+					file,
+					url: URL.createObjectURL(file),
+					canShare:
+						typeof navigator.share === 'function' &&
+						navigator.canShare?.({ files: [file] }) === true
+				};
 			} else exportError = 'Belum ada data presensi untuk diekspor.';
 		} catch {
 			exportError = 'Ekspor Excel gagal. Periksa koneksi lalu coba lagi.';
@@ -153,7 +193,7 @@
 			exporting = false;
 		}
 	}
-	async function openPhoto(day: AttendanceDay, kind: AttendanceKind) {
+	async function openPhoto(day: AttendanceDay, kind: AttendanceKind, source: Promise<string>) {
 		const version = ++activeRequest;
 		busy = true;
 		error = '';
@@ -161,7 +201,7 @@
 		selectedPhoto = { dateKey: day.dateKey, kind };
 		photoDialog.showModal();
 		try {
-			const result = await loadPhoto(uid, day.dateKey, kind);
+			const result = await source;
 			if (version === activeRequest) photo = result;
 		} catch (cause) {
 			if (version === activeRequest) error = friendlyError(cause);
@@ -206,7 +246,12 @@
 		{#if !loading && currentPage.days.length}
 			<div class="history-actions">
 				<label class="include-photos">
-					<input type="checkbox" bind:checked={withPhotos} disabled={exporting || loadingPage} />
+					<input
+						type="checkbox"
+						bind:checked={withPhotos}
+						disabled={exporting || loadingPage}
+						onchange={clearWorkbook}
+					/>
 					{t('Sertakan foto')}
 				</label>
 				<button
@@ -222,6 +267,21 @@
 			</div>
 		{/if}
 	</div>
+	{#if workbook}
+		<div class="export-ready">
+			<p role="status">{t('File Excel siap disimpan.')}</p>
+			<div class="history-actions">
+				<a class="button primary" href={workbook.url} download={workbook.file.name}>
+					<Icon name="download" size={16} />{t('Unduh Excel')}
+				</a>
+				{#if workbook.canShare}
+					<button type="button" class="button secondary" onclick={shareWorkbook}
+						>{t('Bagikan Excel')}</button
+					>
+				{/if}
+			</div>
+		</div>
+	{/if}
 	{#if !loading && days.length}
 		<form class="date-filter" onsubmit={applyFilter} aria-label={t('Filter tanggal')}>
 			<div>
@@ -303,8 +363,8 @@
 			<table>
 				<thead
 					><tr
-						><th>{t('Tanggal')}</th><th>{t('Masuk')}</th><th>{t('Pulang')}</th><th>{t('Durasi')}</th
-						><th>{t('Status')}</th><th>{t('Foto')}</th></tr
+						><th>{t('Tanggal')}</th><th>{t('Foto')}</th><th>{t('Masuk')}</th><th>{t('Pulang')}</th
+						><th>{t('Durasi')}</th><th>{t('Status')}</th></tr
 					></thead
 				><tbody
 					>{#each currentPage.days as day (day.id)}<tr
@@ -320,7 +380,28 @@
 										preferences.locale
 									)}</strong
 								><small>{t(WORK_MODES[day.checkIn.mode])}</small></td
-							><td>{formatTime(day.checkIn.timestamp?.toDate(), preferences.locale)}</td><td
+							><td>
+								<div class="photo-actions">
+									<AttendanceThumbnail
+										{uid}
+										dateKey={day.dateKey}
+										kind="checkIn"
+										label={t('Lihat foto masuk {date}', { date: day.dateKey })}
+										title={t('Foto masuk')}
+										onopen={(source) => openPhoto(day, 'checkIn', source)}
+									/>
+									{#if day.checkOut}
+										<AttendanceThumbnail
+											{uid}
+											dateKey={day.dateKey}
+											kind="checkOut"
+											label={t('Lihat foto pulang {date}', { date: day.dateKey })}
+											title={t('Foto pulang')}
+											onopen={(source) => openPhoto(day, 'checkOut', source)}
+										/>
+									{/if}
+								</div>
+							</td><td>{formatTime(day.checkIn.timestamp?.toDate(), preferences.locale)}</td><td
 								>{formatTime(day.checkOut?.timestamp?.toDate(), preferences.locale)}</td
 							><td
 								>{durationLabel(
@@ -332,24 +413,6 @@
 								><span class={['badge', { complete: day.checkOut }]}
 									>{day.checkOut ? t('Lengkap') : t('Sudah masuk')}</span
 								></td
-							><td
-								><div class="photo-actions">
-									<button
-										type="button"
-										class="icon-button"
-										aria-label={t('Lihat foto masuk {date}', { date: day.dateKey })}
-										title={t('Foto masuk')}
-										onclick={() => openPhoto(day, 'checkIn')}
-										><Icon name="image" size={16} /></button
-									>{#if day.checkOut}<button
-											type="button"
-											class="icon-button"
-											aria-label={t('Lihat foto pulang {date}', { date: day.dateKey })}
-											title={t('Foto pulang')}
-											onclick={() => openPhoto(day, 'checkOut')}
-											><Icon name="image" size={16} /></button
-										>{/if}
-								</div></td
 							></tr
 						>{#if day.checkIn.note || day.checkOut?.note}<tr class="note-row"
 								><td colspan="6"
@@ -382,17 +445,22 @@
 			role="alert"
 		>
 			{t(error)}
-		</p>{:else if photo}<img src={photo} alt={photoLabel} />{/if}
+		</p>{:else if photo}<img
+			src={photo}
+			alt={photoLabel}
+			onerror={() => (error = 'Foto tidak ditemukan.')}
+		/>{/if}
 </dialog>
 
 <style>
 	.history-card {
+		--history-gutter: clamp(16px, 4vw, 27px);
 		overflow: hidden;
 		scroll-margin-top: 24px;
 	}
 	.history-heading {
-		padding: 25px 27px;
-		gap: 12px;
+		padding: 22px var(--history-gutter) 18px;
+		gap: 14px 18px;
 		flex-wrap: wrap;
 	}
 	.history-actions {
@@ -402,7 +470,20 @@
 		gap: 8px 14px;
 	}
 	.export-error {
-		margin: 0 27px 16px;
+		margin: 0 var(--history-gutter) 16px;
+	}
+	.export-ready {
+		display: grid;
+		gap: 10px;
+		margin: 0 var(--history-gutter) 16px;
+		padding: 12px;
+		border: 1px solid var(--border);
+		border-radius: var(--control-radius);
+		background: var(--subtle);
+	}
+	.export-ready p {
+		margin: 0;
+		font-size: 13px;
 	}
 	.include-photos {
 		display: flex;
@@ -419,14 +500,20 @@
 	}
 	.date-filter {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 10px;
-		padding: 0 16px 16px;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.25rem), 1fr));
+		gap: 14px 16px;
+		padding: 16px var(--history-gutter) 18px;
+		border-top: 1px solid var(--border);
+	}
+	.date-filter > div {
+		min-width: 0;
 	}
 	.date-filter input {
 		min-width: 0;
-		min-height: 46px;
-		padding: 8px;
+		max-width: 100%;
+		min-height: 48px;
+		padding: 10px 12px;
+		font-size: 16px;
 	}
 	.filter-actions {
 		grid-column: 1 / -1;
@@ -435,11 +522,10 @@
 		align-items: center;
 		gap: 8px 14px;
 	}
-	@media (min-width: 701px) {
+	@media (min-width: 1000px) {
 		.date-filter {
 			grid-template-columns: repeat(2, minmax(0, 11rem)) auto;
 			align-items: end;
-			padding-inline: 27px;
 		}
 		.filter-actions {
 			grid-column: auto;
@@ -451,7 +537,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 8px;
-		padding: 12px 16px;
+		padding: 12px var(--history-gutter);
 		border-bottom: 1px solid var(--border);
 	}
 	.pagination span {
@@ -514,7 +600,7 @@
 	}
 	th:first-child,
 	td:first-child {
-		padding-left: 27px;
+		padding-left: var(--history-gutter);
 	}
 	td strong {
 		font-weight: 600;
@@ -538,10 +624,7 @@
 	}
 	.photo-actions {
 		display: flex;
-		gap: 3px;
-	}
-	.photo-actions .icon-button {
-		min-width: 34px;
+		gap: 8px;
 	}
 	.note-row td {
 		border-top: none;

@@ -120,7 +120,8 @@ async function loadPhotoBase64(uid: string, key: string, kind: AttendanceKind) {
 	const snapshot = await getDocFromServer(
 		doc(getDatabase(), 'users', uid, 'attendance', key, 'photos', kind)
 	);
-	return snapshot.exists() ? (snapshot.data().base64 as string) : null;
+	const base64 = snapshot.data()?.base64;
+	return typeof base64 === 'string' && base64.trim() ? base64 : null;
 }
 
 export async function loadPhoto(uid: string, key: string, kind: AttendanceKind): Promise<string> {
@@ -132,6 +133,12 @@ export async function loadPhoto(uid: string, key: string, kind: AttendanceKind):
 export async function loadPhotoBlob(uid: string, key: string, kind: AttendanceKind) {
 	const base64 = await loadPhotoBase64(uid, key, kind);
 	if (base64 === null) return null;
-	const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+	let decoded: string;
+	try {
+		decoded = atob(base64);
+	} catch {
+		return null;
+	}
+	const bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
 	return new Blob([bytes], { type: 'image/jpeg' });
 }

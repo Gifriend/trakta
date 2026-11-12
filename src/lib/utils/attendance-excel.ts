@@ -50,16 +50,20 @@ async function loadExcelPhoto(
 ): Promise<Image | null> {
 	const content = await loadPhotoBlob(uid, key, kind);
 	if (!content) return null;
-	const bitmap = await createImageBitmap(content);
-	const scale = Math.min(106 / bitmap.width, 76 / bitmap.height, 1);
-	const width = Math.max(1, Math.round(bitmap.width * scale));
-	const height = Math.max(1, Math.round(bitmap.height * scale));
-	bitmap.close();
+	const url = URL.createObjectURL(content);
+	const size = await new Promise<{ width: number; height: number } | null>((resolve) => {
+		const image = new window.Image();
+		image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+		image.onerror = () => resolve(null);
+		image.src = url;
+	}).finally(() => URL.revokeObjectURL(url));
+	if (!size?.width || !size.height) return null;
+	const scale = Math.min(106 / size.width, 76 / size.height, 1);
 	return {
 		content,
 		contentType: content.type,
-		width,
-		height,
+		width: Math.max(1, Math.round(size.width * scale)),
+		height: Math.max(1, Math.round(size.height * scale)),
 		dpi: 96,
 		anchor: { row, column },
 		offsetX: 6,
@@ -92,7 +96,7 @@ async function loadWorkbookPhotos(uid: string, days: AttendanceDay[], locale: Lo
 	return photos;
 }
 
-export async function downloadAttendanceWorkbook(
+export async function createAttendanceWorkbook(
 	days: AttendanceDay[],
 	locale: Locale,
 	photoOwnerUid?: string
@@ -134,12 +138,14 @@ export async function downloadAttendanceWorkbook(
 		return row;
 	});
 
-	await writeExcelFile([header, ...rows], {
+	const blob = await writeExcelFile([header, ...rows], {
 		sheet: t('Riwayat presensi'),
 		columns: workbookColumns.map(({ width }) => ({ width })),
 		stickyRowsCount: 1,
 		images: photos?.flat().filter((image) => image !== null)
-	}).toFile(
-		`trakta-${locale === 'en' ? 'attendance' : 'presensi'}-${dateKey()}${photos ? (locale === 'en' ? '-photos' : '-foto') : ''}.xlsx`
-	);
+	}).toBlob();
+	const name = `trakta-${locale === 'en' ? 'attendance' : 'presensi'}-${dateKey()}${photos ? (locale === 'en' ? '-photos' : '-foto') : ''}.xlsx`;
+	return new File([blob], name, {
+		type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+	});
 }

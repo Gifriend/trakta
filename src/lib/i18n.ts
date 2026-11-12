@@ -203,6 +203,11 @@ const english: Record<string, string> = {
 	'Ekspor Excel': 'Export Excel',
 	'Sertakan foto': 'Include photos',
 	'Menyiapkan Excel…': 'Preparing Excel…',
+	'File Excel siap disimpan.': 'The Excel file is ready to save.',
+	'Unduh Excel': 'Download Excel',
+	'Bagikan Excel': 'Share Excel',
+	'Excel belum bisa dibagikan. Gunakan Unduh Excel.':
+		'Excel could not be shared. Use Download Excel.',
 	'Hubungkan internet untuk mengunduh seluruh riwayat presensi.':
 		'Connect to the internet to download your full attendance history.',
 	'Belum ada data presensi untuk diekspor.': 'There are no attendance records to export.',
