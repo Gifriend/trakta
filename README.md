@@ -132,7 +132,7 @@ Set the `VITE_FIREBASE_*` variables in Vercel's Environment Variables settings, 
 
 PWA support is enabled in production builds over HTTPS or localhost. On Android and desktop, use **Pasang aplikasi** (Install app) or the browser menu. On iPhone, use Safari → Share → Add to Home Screen. The service worker only caches the build, icons, and public app shell; it doesn't cache Auth responses, Firestore documents, or photos. Firestore uses the SDK's in-memory cache, not persistent offline caching. Firebase Auth still manages login sessions in the browser; use **Keluar** (Sign out) on shared devices.
 
-Regenerate icons with `python scripts/generate-icons.py` (requires Pillow).
+Regenerate icons from `static/icon.svg` with `bun scripts/generate-icons.mjs` (requires Google Chrome, like the browser tests).
 
 Live camera capture requires HTTPS or localhost, browser support, and camera permission. If access is denied or a camera isn't available, you can still choose a gallery image or file. The camera stops after a photo is taken, when switching to the gallery, when the tab is hidden, or when the form is closed. Photos are only sent when attendance is submitted.
 

@@ -255,7 +255,100 @@
 	border-inline-end: 4px double var(--lime);
 }
 
-:root:is([data-theme='glass'], [data-theme='clay'], [data-theme='swiss'], [data-theme='deco'])
+:root[data-theme='studio']:not([data-mode='dark']) {
+	--ink: #37242e;
+	--muted: #71515e;
+	--primary: #96294c;
+	--primary-hover: #7a1d3c;
+	--primary-soft: #ffe2e6;
+	--forest: #682545;
+	--lime: #ffdc9f;
+	--surface: #fffaf8;
+	--background: #fff0ed;
+	--subtle: #fff3f1;
+	--border: #ebbdc7;
+	--control-border: #b97c90;
+	--ring: #96294c;
+	--skeleton-fill: #f4d2d7;
+}
+
+:root[data-theme='studio'][data-mode='dark'] {
+	--ink: #fff0f1;
+	--muted: #dfb6c3;
+	--primary: #ffaec0;
+	--on-primary: #43152a;
+	--primary-hover: #ffcbce;
+	--primary-soft: #533044;
+	--forest: #57263e;
+	--lime: #ffdc9f;
+	--surface: #362432;
+	--background: #261822;
+	--subtle: #422b3b;
+	--border: #684156;
+	--control-border: #ab7389;
+	--ring: #ffaec0;
+	--skeleton-fill: #583c4e;
+}
+
+:root[data-theme='studio'] {
+	--control-radius: 16px;
+}
+
+:root[data-theme='studio'] :is(.card, .today-card) {
+	border-radius: 24px;
+}
+
+:root[data-theme='lagoon']:not([data-mode='dark']) {
+	--ink: #183437;
+	--muted: #476366;
+	--primary: #13606a;
+	--primary-hover: #0d4852;
+	--primary-soft: #d8eff0;
+	--forest: #164952;
+	--lime: #a3eee1;
+	--surface: #f8fefe;
+	--background: #e8f4f5;
+	--subtle: #eff8f8;
+	--border: #bedbdd;
+	--control-border: #6d9fa2;
+	--ring: #13606a;
+	--skeleton-fill: #cce6e9;
+}
+
+:root[data-theme='lagoon'][data-mode='dark'] {
+	--ink: #e4f6f4;
+	--muted: #aac9c9;
+	--primary: #93e0d5;
+	--on-primary: #10373b;
+	--primary-hover: #b4f0e8;
+	--primary-soft: #284a51;
+	--forest: #193b43;
+	--lime: #a3eee1;
+	--surface: #1b3339;
+	--background: #112429;
+	--subtle: #234049;
+	--border: #3e6067;
+	--control-border: #719c9e;
+	--ring: #93e0d5;
+	--skeleton-fill: #355259;
+}
+
+:root[data-theme='lagoon'] {
+	--control-radius: 11px;
+}
+
+:root[data-theme='lagoon'] :is(.today-card, .auth-story) {
+	background: linear-gradient(148deg, var(--forest), #174458 65%, #215b63);
+}
+
+:root:is(
+		[data-theme='glass'],
+		[data-theme='clay'],
+		[data-theme='swiss'],
+		[data-theme='deco'],
+		[data-theme='studio'],
+		[data-theme='lagoon']
+	)
 	:is(.button, input:not([type='radio'], [type='checkbox']), textarea) {
 	border-radius: var(--control-radius);
 }

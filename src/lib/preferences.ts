@@ -10,7 +10,9 @@ export const THEMES = {
 	glass: { label: 'Glassmorphism', colors: { light: '#e5ecff', dark: '#10162d' } },
 	clay: { label: 'Claymorphism', colors: { light: '#f6e9ec', dark: '#211925' } },
 	swiss: { label: 'Swiss Minimalist', colors: { light: '#f6f6f3', dark: '#141414' } },
-	deco: { label: 'Art Deco', colors: { light: '#efe8d8', dark: '#161513' } }
+	deco: { label: 'Art Deco', colors: { light: '#efe8d8', dark: '#161513' } },
+	studio: { label: 'Studio Pop', colors: { light: '#fff0ed', dark: '#261822' } },
+	lagoon: { label: 'Lagoon', colors: { light: '#e8f4f5', dark: '#112429' } }
 } satisfies Record<string, { label: string; colors: Record<DisplayMode, string> }>;
 
 export type Theme = keyof typeof THEMES;

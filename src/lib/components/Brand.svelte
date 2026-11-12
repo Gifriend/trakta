@@ -3,17 +3,7 @@
 </script>
 
 <span class={['brand', { light }]}
-	><span class="brand-mark" aria-hidden="true"
-		><svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-			><path
-				d="M5 13l4 4L19 7"
-				stroke="currentColor"
-				stroke-width="3.5"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			/></svg
-		></span
-	>Trakta</span
+	><img class="brand-mark" src="/icon.svg" alt="" width="36" height="36" />Trakta</span
 >
 
 <style>
@@ -26,20 +16,12 @@
 		color: var(--ink);
 	}
 	.brand-mark {
-		display: grid;
-		place-items: center;
+		flex: none;
 		width: 36px;
 		height: 36px;
 		margin-right: 9px;
-		background: var(--primary);
-		border-radius: 11px;
-		color: var(--on-primary);
 	}
 	.light {
 		color: white;
-	}
-	.light .brand-mark {
-		background: var(--lime);
-		color: var(--forest);
 	}
 </style>
