@@ -285,6 +285,7 @@
 						type="checkbox"
 						bind:checked={withPhotos}
 						disabled={exporting || loadingPage}
+						aria-describedby={withPhotos ? `${fieldId}-export-photos` : undefined}
 						onchange={clearWorkbook}
 					/>
 					{t('Sertakan foto')}
@@ -302,6 +303,11 @@
 			</div>
 		{/if}
 	</div>
+	{#if withPhotos && !loading && currentPage.days.length}
+		<p id={`${fieldId}-export-photos`} class="muted export-photo-hint">
+			{t('Foto masuk dan pulang tampil berdampingan di Excel.')}
+		</p>
+	{/if}
 	{#if workbook}
 		<div class="export-ready">
 			<p role="status">{t('File Excel siap disimpan.')}</p>
@@ -529,6 +535,10 @@
 </dialog>
 
 <style>
+	.export-photo-hint {
+		font-size: 13px;
+		margin-block: 4px 14px;
+	}
 	.history-card {
 		--history-gutter: clamp(16px, 4vw, 27px);
 		overflow: hidden;

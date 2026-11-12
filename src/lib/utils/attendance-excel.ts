@@ -27,9 +27,11 @@ const columns = [
 	{ label: 'Catatan pulang', width: 42 }
 ];
 const photoColumns = [
-	{ label: 'Foto masuk', width: 20 },
-	{ label: 'Foto pulang', width: 20 }
+	{ label: 'Foto masuk', width: 34 },
+	{ label: 'Foto pulang', width: 34 }
 ];
+const photoWidth = 216;
+const photoHeight = 154;
 
 function timeCell(date?: Date) {
 	if (!date) return null;
@@ -58,7 +60,7 @@ async function loadExcelPhoto(
 		image.src = url;
 	}).finally(() => URL.revokeObjectURL(url));
 	if (!size?.width || !size.height) return null;
-	const scale = Math.min(106 / size.width, 76 / size.height, 1);
+	const scale = Math.min(photoWidth / size.width, photoHeight / size.height);
 	return {
 		content,
 		contentType: content.type,
@@ -85,7 +87,7 @@ async function loadWorkbookPhotos(uid: string, days: AttendanceDay[], locale: Lo
 						day.dateKey,
 						kind,
 						row,
-						columns.length + offset + 1,
+						offset + 2,
 						translate(locale, photoColumns[offset].label)
 					);
 				return Promise.all([photo('checkIn', 0), day.checkOut ? photo('checkOut', 1) : null]);
@@ -103,7 +105,7 @@ export async function createAttendanceWorkbook(
 ) {
 	const t = (message: string) => translate(locale, message);
 	const photos = photoOwnerUid ? await loadWorkbookPhotos(photoOwnerUid, days, locale) : null;
-	const workbookColumns = photos ? [...columns, ...photoColumns] : columns;
+	const workbookColumns = photos ? [columns[0], ...photoColumns, ...columns.slice(1)] : columns;
 	const header: Row = workbookColumns.map(({ label }) => ({
 		value: t(label),
 		fontWeight: 'bold',
@@ -120,7 +122,12 @@ export async function createAttendanceWorkbook(
 		const rowPhotos = photos?.[index];
 
 		const row: Row = [
-			{ value: date, format: 'yyyy-mm-dd', height: rowPhotos?.some(Boolean) ? 66 : undefined },
+			{
+				value: date,
+				format: 'yyyy-mm-dd',
+				height: rowPhotos?.some(Boolean) ? 126 : undefined,
+				alignVertical: 'center'
+			},
 			timeCell(start),
 			timeCell(end),
 			duration === null ? null : { value: duration / millisecondsPerDay, format: '[h]:mm:ss' },
@@ -133,7 +140,12 @@ export async function createAttendanceWorkbook(
 		if (rowPhotos) {
 			const [checkIn, checkOut] = rowPhotos;
 			const missingPhoto = { value: t('Foto tidak ditemukan.'), wrap: true };
-			row.push(checkIn ? null : missingPhoto, day.checkOut && !checkOut ? missingPhoto : null);
+			row.splice(
+				1,
+				0,
+				checkIn ? null : missingPhoto,
+				day.checkOut && !checkOut ? missingPhoto : null
+			);
 		}
 		return row;
 	});

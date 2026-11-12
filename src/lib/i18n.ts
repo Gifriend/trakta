@@ -213,6 +213,8 @@ const english: Record<string, string> = {
 		'The next page could not be loaded. Check your connection and try again.',
 	'Ekspor Excel': 'Export Excel',
 	'Sertakan foto': 'Include photos',
+	'Foto masuk dan pulang tampil berdampingan di Excel.':
+		'Check-in and check-out photos appear side by side in Excel.',
 	'Menyiapkan Excel…': 'Preparing Excel…',
 	'File Excel siap disimpan.': 'The Excel file is ready to save.',
 	'Unduh Excel': 'Download Excel',
