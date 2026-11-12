@@ -139,7 +139,3 @@ Live camera capture requires HTTPS or localhost, browser support, and camera per
 Attendance photos require location permission. For **Di kantor**, use the live camera within 150 m of the Graha Sucofindo pin in Pancoran, with a location accuracy estimate of 100 m or better. For **Dari rumah** and **Dinas luar**, gallery uploads record the device location when the file is selected. Check-in and check-out each store their own `photoLocation` in Firestore. Deploy the updated rules and the corresponding website release together.
 
 References: [Firebase auth](https://firebase.google.com/docs/auth/web/password-auth), [Firestore transactions](https://firebase.google.com/docs/firestore/manage-data/transactions), [security rules](https://firebase.google.com/docs/firestore/security/rules-fields), [SvelteKit service workers](https://svelte.dev/docs/kit/service-workers).
-
-## Native mobile app
-
-The Flutter Android/iOS application lives in [`mobile/`](mobile/README.md). It shares this website's Firebase project, authentication users, attendance schema, security rules, colours, themes, and Indonesian/English UI. See the mobile README for platform-specific Firebase configuration, signing, Liquid Glass, and validation commands.
