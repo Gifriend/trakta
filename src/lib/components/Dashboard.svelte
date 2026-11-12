@@ -14,6 +14,8 @@
 	import LoadingSkeleton from './LoadingSkeleton.svelte';
 	import Preferences from './Preferences.svelte';
 	import MobileSettings from './MobileSettings.svelte';
+	import PhotoBooth from './PhotoBooth.svelte';
+	let boothOpen = $state(false);
 
 	const preferences = getPreferences();
 	const { t } = preferences;
@@ -232,6 +234,17 @@
 					<Icon name="wifi" size={17} />
 					{t('Kamu sedang offline. Presensi baru memerlukan internet.')}
 				</div>{/if}
+			<button
+				type="button"
+				class="button secondary booth-trigger"
+				aria-haspopup="dialog"
+				onclick={() => {
+					attendanceForm?.pauseCamera();
+					boothOpen = true;
+				}}
+			>
+				<Icon name="camera" size={18} />{t('Buka fotobox')}
+			</button>
 			{#if loading}
 				<section class="card daily-panel">
 					<LoadingSkeleton label={t('Menyiapkan ruang presensimu…')} />
@@ -364,7 +377,12 @@
 	</div>
 </div>
 
+{#if boothOpen}<PhotoBooth onclose={() => (boothOpen = false)} />{/if}
+
 <style>
+	.booth-trigger {
+		margin-bottom: 16px;
+	}
 	.app-shell {
 		--shell-gutter: clamp(16px, 5vw, 25px);
 		display: flex;

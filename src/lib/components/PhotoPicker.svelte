@@ -14,13 +14,15 @@
 		processing,
 		disabled,
 		onselect,
-		onactivechange
+		onactivechange,
+		countdownSeconds = 0
 	}: {
 		photo: CompressedPhoto | null;
 		processing: boolean;
 		disabled: boolean;
 		onselect: (file: File, frame?: PhotoEdits['frame']) => Promise<void>;
 		onactivechange: (active: boolean) => void;
+		countdownSeconds?: number;
 	} = $props();
 
 	let cameraState = $state<'closed' | 'starting' | 'live'>('closed');
@@ -29,6 +31,7 @@
 	let cameraFrame = $state<PhotoEdits['frame']>('none');
 	let frameOverlay = $state<HTMLCanvasElement>();
 	let taking = $state(false);
+	let countdown = $state(0);
 	let correctMirroring = $state(false);
 	let video = $state<HTMLVideoElement>();
 	let fileInput: HTMLInputElement;
@@ -51,6 +54,7 @@
 	}
 
 	export function stopCamera() {
+		countdown = 0;
 		requestVersion++;
 		stream?.getTracks().forEach((track) => track.stop());
 		stream = undefined;
@@ -138,6 +142,12 @@
 		cameraError = '';
 		const version = requestVersion;
 		try {
+			for (let seconds = countdownSeconds; seconds > 0; seconds--) {
+				countdown = seconds;
+				await new Promise((resolve) => window.setTimeout(resolve, 1000));
+				if (version !== requestVersion || destroyed) return;
+			}
+			countdown = 0;
 			const canvas = document.createElement('canvas');
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
@@ -223,6 +233,8 @@
 			{#if cameraState === 'live' && cameraFrame !== 'none' && frameSize}
 				<canvas bind:this={frameOverlay} class="live-frame" aria-hidden="true"></canvas>
 			{/if}
+			{#if countdown}<span class="countdown" role="status" aria-live="assertive">{countdown}</span
+				>{/if}
 			<button
 				type="button"
 				class="icon-button close-camera"
@@ -324,6 +336,16 @@
 </div>
 
 <style>
+	.countdown {
+		position: absolute;
+		inset: 30% 0 auto;
+		text-align: center;
+		color: white;
+		font-size: 64px;
+		font-weight: 800;
+		text-shadow: 0 2px 12px #000;
+		pointer-events: none;
+	}
 	.photo-picker {
 		position: relative;
 	}
