@@ -31,6 +31,8 @@
 	let exportError = $state('');
 	let withPhotos = $state(false);
 	let expandedDays = $state<Record<string, boolean>>({});
+	let filterOpen = $state(false);
+	let filterToggle = $state<HTMLButtonElement>();
 	let workbook = $state.raw<{ file: File; url: string; canShare: boolean }>();
 	let destroyed = false;
 	let photoDialog: HTMLDialogElement;
@@ -98,6 +100,10 @@
 			appliedFilter = { range, page };
 			navigation = undefined;
 			clearWorkbook();
+			if (filterOpen && filterToggle?.getClientRects().length) {
+				filterOpen = false;
+				filterToggle.focus();
+			}
 		} catch {
 			pageError = 'Filter tanggal gagal dimuat. Periksa koneksi lalu coba lagi.';
 		} finally {
@@ -264,7 +270,7 @@
 	{#if day.checkOut?.note}<p><strong>{t('Pulang')}</strong> {day.checkOut.note}</p>{/if}
 {/snippet}
 
-<section id="riwayat" class="card history-card" aria-labelledby="history-title">
+<section id="riwayat" class="card history-card" aria-labelledby="history-title" tabindex="-1">
 	<div class="section-heading history-heading">
 		<div>
 			<h2 id="history-title">{t('Jejak kehadiranmu')}</h2>
@@ -312,7 +318,25 @@
 		</div>
 	{/if}
 	{#if !loading && days.length}
-		<form class="date-filter" onsubmit={applyFilter} aria-label={t('Filter tanggal')}>
+		<div class="filter-disclosure">
+			<button
+				type="button"
+				class="button secondary"
+				aria-expanded={filterOpen}
+				aria-controls={`${fieldId}-filter`}
+				bind:this={filterToggle}
+				onclick={() => (filterOpen = !filterOpen)}
+			>
+				<Icon name="calendar" size={17} />{t('Filter tanggal')}
+				{#if appliedFilter}<span class="filter-status">{t('Aktif')}</span>{/if}
+			</button>
+		</div>
+		<form
+			id={`${fieldId}-filter`}
+			class={['date-filter', { 'filter-open': filterOpen }]}
+			onsubmit={applyFilter}
+			aria-label={t('Filter tanggal')}
+		>
 			<div>
 				<label for={`${fieldId}-from`}>{t('Tanggal mulai')}</label>
 				<input
@@ -335,7 +359,7 @@
 			</div>
 			<div class="filter-actions">
 				<button type="submit" class="button secondary" disabled={loadingPage || exporting}>
-					{t('Filter tanggal')}
+					{t('Terapkan filter')}
 				</button>
 				{#if appliedFilter || from || to}
 					<button
@@ -556,6 +580,24 @@
 		gap: 14px 16px;
 		padding: 16px var(--history-gutter) 18px;
 		border-top: 1px solid var(--border);
+	}
+	.filter-disclosure {
+		display: none;
+	}
+	.filter-status {
+		color: var(--primary);
+		background: var(--primary-soft);
+		padding: 2px 7px;
+		border-radius: var(--control-radius);
+	}
+	@media (max-width: 900px) {
+		.filter-disclosure {
+			display: block;
+			padding: 0 var(--history-gutter) 12px;
+		}
+		.date-filter:not(.filter-open) {
+			display: none;
+		}
 	}
 	.date-filter > div {
 		min-width: 0;

@@ -20,7 +20,7 @@
 	let submitting = $state(false);
 	let error = $state('');
 	let cameraActive = $state(false);
-	let picker: { openCamera: () => Promise<void> };
+	let picker: { openCamera: () => Promise<void>; stopCamera: () => void };
 	let selectionVersion = 0;
 
 	async function choosePhoto(file: File) {
@@ -60,6 +60,9 @@
 		void picker.openCamera();
 		document.getElementById('photo-step')?.scrollIntoView({ block: 'start' });
 	}
+	export function pauseCamera() {
+		picker?.stopCamera();
+	}
 	const preferences = getPreferences();
 	const { t } = preferences;
 </script>
@@ -89,6 +92,11 @@
 					cameraActive = active;
 				}}
 			/>
+			{#if photo && !cameraActive && !processing}
+				<p class="photo-ready" role="status">
+					<Icon name="check" size={16} />{t('Foto siap dikirim.')}
+				</p>
+			{/if}
 		</div>
 		<fieldset disabled={submitting || processing}>
 			<legend>{t('Lokasi kerja')}</legend>
@@ -159,6 +167,14 @@
 	}
 	.photo-step {
 		margin: 18px 0 22px;
+	}
+	.photo-ready {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: 10px 0 0;
+		color: var(--primary);
+		font-size: 13px;
 	}
 	.photo-step > label,
 	label[for='note'] {

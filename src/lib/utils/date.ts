@@ -1,14 +1,15 @@
 import type { Locale } from '#lib/i18n.ts';
 
 export const TIME_ZONE = 'Asia/Jakarta';
+const keyFormatter = new Intl.DateTimeFormat('en-GB', {
+	timeZone: TIME_ZONE,
+	year: 'numeric',
+	month: '2-digit',
+	day: '2-digit'
+});
 
 export function dateKey(date = new Date()): string {
-	const parts = new Intl.DateTimeFormat('en-GB', {
-		timeZone: TIME_ZONE,
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit'
-	}).formatToParts(date);
+	const parts = keyFormatter.formatToParts(date);
 	return ['year', 'month', 'day'].map((type) => parts.find((p) => p.type === type)?.value).join('');
 }
 

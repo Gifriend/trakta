@@ -27,16 +27,18 @@
 	let permissionDenied = $state(false);
 	let message = $state('');
 	let signingOut = $state(false);
-	const today = $derived(days.find((day) => day.dateKey === dateKey(now)));
+	let viewingHistory = $state(false);
+	let attendanceForm = $state<{ pauseCamera: () => void }>();
+	let dailyHeading = $state<HTMLHeadingElement>();
+	const currentDay = $derived(dateKey(now));
+	const today = $derived(days.find((day) => day.dateKey === currentDay));
 	const firstName = $derived(
 		(user.displayName || user.email?.split('@')[0] || t('Teman')).split(' ')[0]
 	);
 	const initials = $derived((user.displayName || user.email || 'T').slice(0, 2).toUpperCase());
-	const monthDays = $derived(
-		days.filter((day) => day.dateKey.startsWith(dateKey(now).slice(0, 6)))
-	);
+	const monthDays = $derived(days.filter((day) => day.dateKey.startsWith(currentDay.slice(0, 6))));
 	const nextKind = $derived(today?.checkIn ? 'checkOut' : 'checkIn');
-	const formKey = $derived(`${dateKey(now)}-${nextKind}`);
+	const formKey = $derived(`${currentDay}-${nextKind}`);
 	let activeForm = $state('');
 	let stopWatching: (() => void) | undefined;
 	function subscribe() {
@@ -64,7 +66,8 @@
 		online = navigator.onLine;
 		subscribe();
 		const timer = window.setInterval(() => {
-			now = new Date();
+			const next = new Date();
+			if (dateKey(next) !== currentDay) now = next;
 		}, 1000);
 		return () => {
 			clearInterval(timer);
@@ -72,6 +75,7 @@
 		};
 	});
 	async function signOut() {
+		error = '';
 		signingOut = true;
 		try {
 			await logout();
@@ -82,6 +86,35 @@
 	}
 	function submitted() {
 		message = 'Presensi berhasil diterima server.';
+		if (!viewingHistory) dailyHeading?.focus();
+	}
+	function watchHistoryPosition(node: HTMLElement) {
+		let frame = 0;
+		function update() {
+			if (frame) return;
+			frame = requestAnimationFrame(() => {
+				frame = 0;
+				const top = node.getBoundingClientRect().top;
+				const atBottom =
+					window.scrollY > 0 &&
+					window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+				const next = top <= window.innerHeight / 3 || (atBottom && top < window.innerHeight / 2);
+				if (next && !viewingHistory) pauseCamera();
+				viewingHistory = next;
+			});
+		}
+		update();
+		window.addEventListener('scroll', update, { passive: true });
+		window.addEventListener('resize', update);
+		return () => {
+			window.removeEventListener('scroll', update);
+			window.removeEventListener('resize', update);
+			cancelAnimationFrame(frame);
+			viewingHistory = false;
+		};
+	}
+	function pauseCamera() {
+		attendanceForm?.pauseCamera();
 	}
 	async function startAttendance() {
 		activeForm = formKey;
@@ -105,9 +138,13 @@
 		<a class="brand-link" href="#ringkasan" aria-label={t('Trakta — ringkasan')}><Brand /></a>
 		<div class="workspace-label">{t('RUANG PRIBADI')}</div>
 		<nav aria-label={t('Navigasi utama')}>
-			<a href="#ringkasan" class="nav-link active"
-				><Icon name="grid" size={18} /> {t('Ringkasan')} <span class="nav-dot"></span></a
-			><a href="#riwayat" class="nav-link"
+			<a href="#ringkasan" class="nav-link" aria-current={viewingHistory ? undefined : 'location'}
+				><Icon name="grid" size={18} /> {t('Ringkasan')}</a
+			><a
+				href="#riwayat"
+				class="nav-link"
+				onclick={pauseCamera}
+				aria-current={viewingHistory ? 'location' : undefined}
 				><Icon name="calendar" size={19} /> {t('Riwayat presensi')}</a
 			>
 		</nav>
@@ -144,7 +181,7 @@
 				<span class="avatar small">{initials}</span>
 				<MobileSettings camera>
 					{#snippet children(close)}
-						<nav aria-label={t('Navigasi utama')}>
+						<div>
 							<button
 								type="button"
 								class="nav-link settings-logout"
@@ -154,15 +191,22 @@
 									void signOut();
 								}}><Icon name="exit" size={18} />{t('Keluar dari akun')}</button
 							>
-						</nav>
+						</div>
 					{/snippet}
 				</MobileSettings>
 			</div>
 		</header>
 		<nav class="mobile-navigation" aria-label={t('Navigasi utama')}>
-			<a href="#ringkasan"><Icon name="grid" size={20} />{t('Hari ini')}</a>
+			<a href="#ringkasan" aria-current={viewingHistory ? undefined : 'location'}
+				><Icon name="grid" size={20} />{t('Hari ini')}</a
+			>
 			{#if !loadError}
-				<a href="#riwayat"><Icon name="calendar" size={20} />{t('Riwayat')}</a>
+				<a
+					href="#riwayat"
+					onclick={pauseCamera}
+					aria-current={viewingHistory ? 'location' : undefined}
+					><Icon name="calendar" size={20} />{t('Riwayat')}</a
+				>
 			{/if}
 		</nav>
 		<main id="main">
@@ -180,7 +224,7 @@
 					>
 				</div>{/if}
 			{#if error}<div class="notice error status-message" role="alert">
-					{t(error)}<button type="button" class="text-button" onclick={subscribe}
+					{t(error)}<button type="button" class="text-button" onclick={signOut}
 						>{t('Coba lagi')}</button
 					>
 				</div>{/if}
@@ -207,7 +251,7 @@
 				<section class="card daily-panel" aria-labelledby="daily-title">
 					<div class="daily-heading">
 						<div>
-							<h2 id="daily-title">{t('Hari ini')}</h2>
+							<h2 id="daily-title" tabindex="-1" bind:this={dailyHeading}>{t('Hari ini')}</h2>
 							<p>{formatDate(now, {}, preferences.locale)}</p>
 						</div>
 						<span class={['daily-status', { recorded: today?.checkIn }]}>
@@ -265,14 +309,26 @@
 							aria-controls={activeForm === formKey ? 'attendance-form' : undefined}
 						>
 							<Icon name={nextKind === 'checkIn' ? 'enter' : 'exit'} size={20} />
-							{t(nextKind === 'checkIn' ? 'Presensi masuk' : 'Presensi pulang')}
+							{t(
+								activeForm === formKey
+									? 'Lanjutkan presensi'
+									: nextKind === 'checkIn'
+										? 'Presensi masuk'
+										: 'Presensi pulang'
+							)}
 							<Icon name="arrow" size={18} />
 						</button>
 					{/if}
 				</section>
 				{#if !today?.checkOut && activeForm === formKey}
 					{#key formKey}
-						<AttendanceForm uid={user.uid} kind={nextKind} {online} onsuccess={submitted} />
+						<AttendanceForm
+							bind:this={attendanceForm}
+							uid={user.uid}
+							kind={nextKind}
+							{online}
+							onsuccess={submitted}
+						/>
 					{/key}
 				{/if}
 				<section class="card monthly-summary" aria-label={t('Kehadiran bulan ini')}>
@@ -293,7 +349,11 @@
 					>
 				</section>
 			{/if}
-			{#if !loadError}<AttendanceHistory {days} uid={user.uid} {loading} />{/if}
+			{#if !loadError}
+				<div {@attach watchHistoryPosition}>
+					<AttendanceHistory {days} uid={user.uid} {loading} />
+				</div>
+			{/if}
 			<div class="mobile-install"><PwaInstall /></div>
 			<footer class="page-footer">
 				<span>Trakta <span class="muted">{t('Teman setiap hari kerja.')}</span></span><span
@@ -349,7 +409,8 @@
 		text-decoration: none;
 		border-radius: 8px;
 	}
-	.nav-link.active {
+	.nav-link[aria-current='location'],
+	.mobile-navigation a[aria-current='location'] {
 		background: var(--primary-soft);
 		color: var(--primary);
 		font-weight: 600;
@@ -361,13 +422,6 @@
 		border: 0;
 		background: transparent;
 		text-align: start;
-	}
-	.nav-dot {
-		margin-left: auto;
-		width: 5px;
-		height: 5px;
-		border-radius: 50%;
-		background: var(--primary);
 	}
 	.sidebar-bottom {
 		margin-top: auto;
@@ -688,6 +742,9 @@
 		}
 	}
 	@media (max-width: 900px) {
+		:global(html:has(.mobile-navigation)) {
+			scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom));
+		}
 		.main-shell {
 			padding-bottom: calc(64px + env(safe-area-inset-bottom));
 		}

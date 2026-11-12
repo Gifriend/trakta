@@ -33,7 +33,7 @@
 	let requestVersion = 0;
 	let destroyed = false;
 
-	function stopCamera() {
+	export function stopCamera() {
 		requestVersion++;
 		stream?.getTracks().forEach((track) => track.stop());
 		stream = undefined;
@@ -260,17 +260,13 @@
 		</div>
 	{/if}
 	<div class="source-options">
-		{#if !photo || cameraState !== 'closed'}
+		{#if !photo && cameraState === 'closed'}
 			<button
 				type="button"
 				class="button secondary"
 				onclick={openCamera}
-				disabled={disabled || processing || taking || cameraState !== 'closed'}
-				><Icon name="camera" size={16} />{cameraState === 'starting'
-					? t('Membuka kamera…')
-					: cameraState === 'live'
-						? t('Kamera aktif')
-						: t('Buka kamera')}</button
+				disabled={disabled || processing || taking}
+				><Icon name="camera" size={16} />{t('Buka kamera')}</button
 			>
 		{/if}
 		<button
