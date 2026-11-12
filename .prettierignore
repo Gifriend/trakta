@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Flutter uses dart format and platform-specific tooling
+/mobile/
