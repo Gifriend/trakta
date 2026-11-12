@@ -43,3 +43,8 @@ flutter:
   assets:
     - assets/brand.svg
     - assets/translations.json
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
