@@ -1,89 +1,89 @@
-# Konfigurasi Firebase dan Firestore
+# Firebase and Firestore setup
 
-Proyek aplikasi ini: **`presensi-e558f`**, sesuai `VITE_FIREBASE_PROJECT_ID` di `.env`. Firebase CLI memakai target yang sama melalui `.firebaserc`.
+This app's project is **`presensi-e558f`**, matching `VITE_FIREBASE_PROJECT_ID` in `.env`. The Firebase CLI uses the same target through `.firebaserc`.
 
-Firebase digunakan untuk Authentication dan Firestore. Website dideploy secara terpisah ke Vercel sesuai [panduan Vercel](VERCEL.md). `firebase.json` hanya mengatur database, rules, indeks, dan emulator.
+Firebase handles Authentication and Firestore. The website is deployed separately to Vercel; see the [Vercel guide](VERCEL.md). `firebase.json` only configures the database, rules, indexes, and emulators.
 
-## 1. Pasang dependensi dengan Bun
+## 1. Install dependencies with Bun
 
 ```powershell
 bun install --frozen-lockfile
 ```
 
-Gunakan `bun.lock` sebagai lockfile. Perintah aplikasi adalah `bun run dev`, `bun run check`, dan `bun run build`. Firebase CLI tetap menggunakan runtime Node yang terpasang; tidak perlu memasang Firebase CLI global.
+Use `bun.lock` as the lockfile. The app commands are `bun run dev`, `bun run check`, and `bun run build`. The Firebase CLI still uses the installed Node runtime; you don't need to install it globally.
 
-## 2. Login ke akun pemilik proyek
+## 2. Sign in with the project owner's account
 
 ```powershell
 bun run firebase:login --reauth
 bun run firebase:databases
 ```
 
-Login memakai akun Google yang memiliki akses ke proyek `presensi-e558f`. Jika perlu memilih akun lain:
+Sign in with a Google account that has access to `presensi-e558f`. To switch accounts:
 
 ```powershell
 bunx --no-install firebase login:add
-bunx --no-install firebase login:use EMAIL_AKUN_PEMILIK
+bunx --no-install firebase login:use OWNER_ACCOUNT_EMAIL
 ```
 
-Jika muncul `403 The caller does not have permission`, akun CLI belum memiliki izin yang diperlukan. Gunakan akun pemilik proyek, atau minta pemilik memberikan izin pengelolaan database, rules, dan indeks. Konfigurasi web `.env` tidak memberikan izin administratif untuk deploy.
+If you see `403 The caller does not have permission`, the CLI account doesn't have the required permissions. Use the project owner's account, or ask the owner to grant access to manage the database, rules, and indexes. The web configuration in `.env` doesn't grant administrative deployment permissions.
 
-## 3. Buat atau periksa database
+## 3. Create or check the database
 
-Buka [Firestore proyek presensi-e558f](https://console.firebase.google.com/project/presensi-e558f/firestore).
+Open [Firestore for presensi-e558f](https://console.firebase.google.com/project/presensi-e558f/firestore).
 
-Jika belum ada database, pilih **Create database** dengan pengaturan:
+If there isn't a database yet, choose **Create database** with these settings:
 
-| Pengaturan                   | Nilai                       |
-| ---------------------------- | --------------------------- |
-| Edition                      | Standard                    |
-| Database ID                  | `(default)`                 |
-| Mode                         | Native / Firestore          |
-| Location untuk database baru | `asia-southeast2` — Jakarta |
-| Security rules awal          | Production mode             |
+| Setting                     | Value                       |
+| --------------------------- | --------------------------- |
+| Edition                     | Standard                    |
+| Database ID                 | `(default)`                 |
+| Mode                        | Native / Firestore          |
+| Location for a new database | `asia-southeast2` — Jakarta |
+| Initial security rules      | Production mode             |
 
-`firebase.json` menyertakan database, edition, lokasi, rules, dan indeks tersebut. Firebase CLI dapat membuat database default saat deploy pertama jika belum ada dan akun memiliki izin. Jika database sudah ada, lokasi tetap memakai lokasi database tersebut; konfigurasi ini tidak memindahkan data. Lokasi database baru harus ditentukan sebelum dibuat karena tidak dapat diubah setelahnya.
+`firebase.json` includes these database, edition, location, rules, and index settings. The Firebase CLI can create the default database on the first deployment if it doesn't exist and the account has permission. An existing database keeps its current location; this configuration doesn't move data. Choose the location before creating a new database, since it can't be changed afterward.
 
-## 4. Terapkan rules dan indeks
+## 4. Deploy rules and indexes
 
-Rules bawaan berikut menolak semua pembacaan dan penulisan, termasuk dari akun yang sudah login:
+The following default rule blocks all reads and writes, including requests from signed-in users:
 
 ```text
 allow read, write: if false;
 ```
 
-Jika aplikasi menampilkan **Akses presensi belum diizinkan** atau versi sebelumnya menampilkan **Data belum dapat dimuat**, buka [Firestore → Rules](https://console.firebase.google.com/project/presensi-e558f/firestore/rules), **ganti seluruh isi editor dengan seluruh isi [firestore.rules](../firestore.rules)**, lalu pilih **Publish**. Gunakan database `(default)` pada proyek `presensi-e558f`. Setelah rules dipublikasikan, tekan **Muat ulang data** di aplikasi. Jika listener masih memakai rules sebelumnya, tunggu propagasi rules lalu coba kembali.
+If the app shows **Akses presensi belum diizinkan** (Attendance access isn't allowed yet), or an older version shows **Data belum dapat dimuat** (Data couldn't be loaded), open [Firestore → Rules](https://console.firebase.google.com/project/presensi-e558f/firestore/rules), **replace the entire editor contents with the full contents of [firestore.rules](../firestore.rules)**, then select **Publish**. Use the `(default)` database in `presensi-e558f`. Once the rules are published, click **Muat ulang data** (Reload data) in the app. If the listener still uses the old rules, wait for the rules to propagate and try again.
 
-File lokal tidak otomatis mengubah rules yang aktif di Firebase. Deployment website ke Vercel juga tidak memublikasikan rules. Akun CLI yang terakhir diperiksa belum memiliki izin mengelola proyek (HTTP 403); gunakan Firebase Console dengan akun pemilik atau login CLI memakai akun yang memiliki izin. Mengganti rules ke akses publik tidak diperlukan.
+Local files don't automatically update the rules running in Firebase. Deploying the website to Vercel doesn't publish rules either. The last checked CLI account lacked project management permissions (HTTP 403); use the Firebase Console with the owner's account, or sign in to the CLI with an authorized account. You don't need to make the rules public.
 
-Perintah CLI untuk menerapkan rules dan indeks yang sama:
+To deploy the same rules and indexes through the CLI:
 
 ```powershell
 bun run firestore:deploy
 ```
 
-Script hanya menargetkan Firestore. Perintah ini dijalankan terpisah ketika rules atau indeks berubah; tidak dijalankan otomatis oleh build Vercel. File yang diterapkan:
+This script only targets Firestore. Run it separately whenever rules or indexes change; the Vercel build doesn't run it automatically. It deploys:
 
-- `firestore.rules`: hanya pengguna terautentikasi yang dapat mengakses data miliknya. Timestamp harus berasal dari server, satu masuk/pulang per hari WIB, foto wajib dalam transaksi yang sama, dan catatan maksimal 300 karakter.
-- `firestore.indexes.json`: field foto `base64` tidak diindeks. Query riwayat menggunakan indeks satu field `dateKey`, sehingga tidak membutuhkan composite index.
+- `firestore.rules`: authenticated users can only access their own data. Timestamps must come from the server, clock-in and clock-out are limited to once each per WIB day, photos are required in the same transaction, and notes are limited to 300 characters.
+- `firestore.indexes.json`: the photo `base64` field isn't indexed. History queries use the single-field `dateKey` index, so they don't need a composite index.
 
-Presensi dan foto tidak dapat diedit atau dihapus lewat aplikasi. Rules khusus aplikasi ini tidak memberikan akses ke koleksi lain. Jika proyek dipakai aplikasi lain, gabungkan rules aplikasi tersebut sebelum deploy.
+Attendance entries and photos can't be edited or deleted through the app. These app-specific rules don't grant access to other collections. If other apps share the Firebase project, merge their rules before deploying.
 
-Alternatif melalui Console: buka tab **Rules**, salin seluruh isi `firestore.rules`, lalu **Publish**. Pengecualian indeks foto tetap perlu diterapkan lewat CLI atau konfigurasi single-field index Console untuk collection group `photos`, field `base64`.
+Alternatively, open the Console's **Rules** tab, paste the full contents of `firestore.rules`, and select **Publish**. The photo index exemption still needs to be applied through the CLI or the Console's single-field index configuration for the `photos` collection group and `base64` field.
 
-## 5. Aktifkan Authentication
+## 5. Enable Authentication
 
-Buka [Authentication](https://console.firebase.google.com/project/presensi-e558f/authentication), aktifkan provider **Email/Password**, lalu periksa Authorized domains. Tambahkan hostname produksi Vercel (contoh `nama-proyek.vercel.app`), custom domain yang digunakan, serta `localhost` untuk pengembangan. Domain ditulis tanpa protokol atau path.
+Open [Authentication](https://console.firebase.google.com/project/presensi-e558f/authentication), enable the **Email/Password** provider, and check Authorized domains. Add the production Vercel hostname (for example, `your-project.vercel.app`), any custom domain you use, and `localhost` for development. Enter domains without a protocol or path.
 
-`.env` sudah tersedia di proyek ini dan tidak perlu ditimpa. Untuk setup di komputer lain, salin `.env.example` ke `.env` dan isi nilai konfigurasi Web app dari Firebase Project settings. Pastikan `VITE_FIREBASE_USE_EMULATORS=false` untuk Firebase produksi.
+This project's local setup already has an `.env` file, so don't overwrite it. On another computer, copy `.env.example` to `.env` and fill in the Web app configuration from Firebase Project settings. Make sure `VITE_FIREBASE_USE_EMULATORS=false` when using production Firebase.
 
-## 6. Jalankan dan verifikasi
+## 6. Run and verify
 
 ```powershell
 bun run dev
 ```
 
-Daftar/login, kirim foto untuk masuk, lalu kirim foto pulang. Dokumen dibuat otomatis oleh transaksi aplikasi; tidak perlu membuat koleksi atau data contoh secara manual:
+Sign up or sign in, submit a photo to clock in, then submit a photo to clock out. App transactions create documents automatically; you don't need to create collections or sample data by hand:
 
 ```text
 users/{firebaseAuthUid}/attendance/{YYYYMMDD}
@@ -99,14 +99,14 @@ users/{firebaseAuthUid}/attendance/{YYYYMMDD}/photos/checkOut
   createdAt: Timestamp
 ```
 
-Dokumen `users/{uid}` sendiri tidak perlu dibuat; Firestore dapat memiliki subkoleksi tanpa dokumen induk. Foto asli dikompresi menjadi JPEG maksimal 100 KB, kemudian disimpan sebagai teks base64 pada dokumen foto. Waktu presensi memakai `serverTimestamp()` dan diverifikasi oleh rules.
+You don't need to create the `users/{uid}` document itself; Firestore allows subcollections without a parent document. Original photos are compressed to JPEG at no more than 100 KB, then stored as base64 text in photo documents. Attendance times use `serverTimestamp()` and are checked by the rules.
 
-Uji lokal tanpa menyentuh proyek produksi:
+To test locally without touching the production project:
 
 ```powershell
 bun run test:rules
 ```
 
-Perintah ini menggunakan proyek emulator `demo-presensi`, terpisah dari target produksi. Java 21 diperlukan.
+This command uses the `demo-presensi` emulator project, separate from the production target. Java 21 is required.
 
-Referensi resmi: [Firebase CLI](https://firebase.google.com/docs/cli), [pengelolaan database](https://firebase.google.com/docs/firestore/manage-databases), [lokasi Firestore](https://firebase.google.com/docs/firestore/locations).
+Official references: [Firebase CLI](https://firebase.google.com/docs/cli), [database management](https://firebase.google.com/docs/firestore/manage-databases), [Firestore locations](https://firebase.google.com/docs/firestore/locations).

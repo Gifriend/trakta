@@ -1,71 +1,71 @@
-# Deployment website ke Vercel
+# Deploy the website to Vercel
 
-Website Trakta menggunakan SvelteKit dengan adapter statis. Vercel menyajikan hasil build; Firebase menangani login dan penyimpanan presensi/foto.
+Trakta uses SvelteKit with a static adapter. Vercel serves the build output, while Firebase handles sign-in and attendance/photo storage.
 
-| Bagian                 | Tempat                  | Konfigurasi                                                  |
-| ---------------------- | ----------------------- | ------------------------------------------------------------ |
-| Website, aset, dan PWA | Vercel                  | `vercel.json`                                                |
-| Login pengguna         | Firebase Authentication | Firebase Console                                             |
-| Presensi dan foto      | Cloud Firestore         | `firebase.json`, `firestore.rules`, `firestore.indexes.json` |
-| Target proyek Firebase | Firebase CLI            | `.firebaserc`                                                |
+| Part                     | Service                 | Configuration                                                |
+| ------------------------ | ----------------------- | ------------------------------------------------------------ |
+| Website, assets, and PWA | Vercel                  | `vercel.json`                                                |
+| User sign-in             | Firebase Authentication | Firebase Console                                             |
+| Attendance and photos    | Cloud Firestore         | `firebase.json`, `firestore.rules`, `firestore.indexes.json` |
+| Firebase project target  | Firebase CLI            | `.firebaserc`                                                |
 
-## 1. Import repository
+## 1. Import the repository
 
-Push proyek ke repository Git milikmu, lalu pilih **Add New → Project** di Vercel dan import repository tersebut. Gunakan root directory yang berisi `package.json` dan `vercel.json`.
+Push the project to your Git repository, then choose **Add New → Project** in Vercel and import it. Use the root directory containing `package.json` and `vercel.json`.
 
-Pengaturan build sudah ada di `vercel.json`:
+The build settings are already in `vercel.json`:
 
-| Pengaturan       | Nilai                           |
+| Setting          | Value                           |
 | ---------------- | ------------------------------- |
 | Framework Preset | Other (`framework: null`)       |
 | Install Command  | `bun install --frozen-lockfile` |
 | Build Command    | `bun run build`                 |
 | Output Directory | `build`                         |
 
-Preset Other digunakan karena proyek menghasilkan website statis melalui adapter SvelteKit yang sudah dikonfigurasi. Proses build tetap menjalankan SvelteKit. Tidak diperlukan adapter Vercel atau Vercel Functions untuk implementasi ini.
+The Other preset is used because the project generates a static website through its configured SvelteKit adapter. The build still runs SvelteKit. This setup doesn't need a Vercel adapter or Vercel Functions.
 
-Gunakan versi Node build yang kompatibel dengan dependensi (pengembangan memakai Node 24). Commit `bun.lock` agar instalasi Vercel memakai versi dependensi yang sama.
+Use a Node build version compatible with the dependencies (development uses Node 24). Commit `bun.lock` so Vercel installs the same dependency versions.
 
-## 2. Isi environment variables
+## 2. Add environment variables
 
-Di **Project → Settings → Environment Variables**, salin nilai konfigurasi Web app Firebase yang sama dengan `.env` lokal:
+In **Project → Settings → Environment Variables**, copy the same Firebase Web app configuration values you use in your local `.env`:
 
 ```dotenv
-VITE_FIREBASE_API_KEY=nilai_dari_firebase
+VITE_FIREBASE_API_KEY=value_from_firebase
 VITE_FIREBASE_AUTH_DOMAIN=presensi-e558f.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=presensi-e558f
-VITE_FIREBASE_APP_ID=nilai_dari_firebase
+VITE_FIREBASE_APP_ID=value_from_firebase
 VITE_FIREBASE_USE_EMULATORS=false
 ```
 
-Terapkan pada environment **Production** dan environment **Preview** jika preview perlu mengakses Firebase. Nilai `VITE_*` tertanam saat build, sehingga perubahan memerlukan deployment baru. `.env` lokal tidak diunggah ke Git. Vercel tidak membutuhkan akun admin Firebase, service account, atau token Firebase CLI untuk membangun website ini.
+Apply them to **Production**, and to **Preview** if preview deployments need Firebase access. `VITE_*` values are embedded at build time, so changing them requires a new deployment. Your local `.env` isn't uploaded to Git. Vercel doesn't need a Firebase admin account, service account, or Firebase CLI token to build this website.
 
-Jika Preview memakai proyek Firebase produksi yang sama, data presensi yang dikirim dari Preview juga masuk ke database produksi. Gunakan proyek Firebase terpisah untuk pengujian jika diperlukan.
+If Preview uses the same production Firebase project, attendance submitted from Preview also goes into the production database. Use a separate Firebase project for testing if needed.
 
-## 3. Atur domain Firebase Authentication
+## 3. Set up Firebase Authentication domains
 
-Sesudah mendapatkan URL produksi, buka [Firebase Authentication](https://console.firebase.google.com/project/presensi-e558f/authentication) → **Settings → Authorized domains**. Tambahkan hostname Vercel produksi dan custom domain yang digunakan, tanpa `https://` atau path.
+Once you have the production URL, open [Firebase Authentication](https://console.firebase.google.com/project/presensi-e558f/authentication) → **Settings → Authorized domains**. Add the production Vercel hostname and any custom domain you use, without `https://` or a path.
 
-`VITE_FIREBASE_AUTH_DOMAIN` tetap memakai domain Web app Firebase. Domain website Vercel didaftarkan pada Authorized domains. Provider yang digunakan aplikasi ini adalah Email/Password.
+Keep `VITE_FIREBASE_AUTH_DOMAIN` set to the Firebase Web app domain. Register the Vercel website domain under Authorized domains. The app uses the Email/Password provider.
 
-## 4. Deploy Firestore secara terpisah
+## 4. Deploy Firestore separately
 
-Jalankan dari komputer yang sudah login Firebase dengan akun yang memiliki izin:
+Run these commands on a computer signed in to Firebase with an authorized account:
 
 ```powershell
 bun run firebase:login
 bun run firestore:deploy
 ```
 
-Perintah tersebut menerapkan rules dan indeks ke proyek `presensi-e558f`. Deployment Vercel tidak menjalankan Firebase CLI. Pengubahan UI cukup melalui deployment Vercel; pengubahan rules/indeks memerlukan perintah Firestore di atas. Panduan rinci ada di [FIREBASE.md](FIREBASE.md).
+These commands deploy rules and indexes to `presensi-e558f`. Vercel deployments don't run the Firebase CLI. UI changes only need a Vercel deployment; rule and index changes need the Firestore command above. See [FIREBASE.md](FIREBASE.md) for details.
 
-## 5. Verifikasi setelah deployment
+## 5. Verify the deployment
 
-1. Buka URL HTTPS produksi dan login.
-2. Kirim presensi masuk/pulang menggunakan foto, lalu periksa riwayat.
-3. Coba pasang PWA dari browser yang mendukung.
-4. Setelah kunjungan online pertama, buka ulang aplikasi saat offline untuk memeriksa shell PWA. Pengiriman presensi tetap membutuhkan internet.
+1. Open the production HTTPS URL and sign in.
+2. Clock in and out with photos, then check the history.
+3. Try installing the PWA from a supported browser.
+4. After your first online visit, reopen the app offline to check the PWA shell. Submitting attendance still requires internet access.
 
-Header keamanan dan `Cache-Control: no-cache` untuk `service-worker.js` berada di `vercel.json`. Aset, manifest, dan service worker disajikan melalui domain Vercel yang sama. Konfigurasi ini tidak menambahkan rewrite semua request ke HTML, sehingga file PWA yang tidak ditemukan tetap menghasilkan 404.
+Security headers and `Cache-Control: no-cache` for `service-worker.js` are configured in `vercel.json`. Assets, the manifest, and the service worker are served from the same Vercel domain. This configuration doesn't rewrite every request to HTML, so missing PWA files still return a 404.
 
-Referensi: [Konfigurasi vercel.json](https://vercel.com/docs/project-configuration/vercel-json), [konfigurasi build](https://vercel.com/docs/builds/configure-a-build).
+References: [vercel.json configuration](https://vercel.com/docs/project-configuration/vercel-json), [build configuration](https://vercel.com/docs/builds/configure-a-build).

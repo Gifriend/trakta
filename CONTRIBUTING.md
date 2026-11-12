@@ -1,29 +1,29 @@
-# Kontribusi ke Trakta
+# Contributing to Trakta
 
-## Menjalankan proyek
+## Run the project
 
 ```powershell
 bun install --frozen-lockfile
 bun run dev
 ```
 
-Salin `.env.example` menjadi `.env` hanya untuk setup baru. Isi konfigurasi lokal sendiri. `bun.lock` dikomit agar versi dependensi konsisten.
+Copy `.env.example` to `.env` only for a fresh setup, then fill in your local configuration. `bun.lock` is committed to keep dependency versions consistent.
 
 ## Conventional Commits
 
-Gunakan format `type(scope): ringkasan`, dengan satu tujuan utama per commit:
+Use `type(scope): summary`, with one main purpose per commit:
 
-| Tipe       | Contoh penggunaan                                |
-| ---------- | ------------------------------------------------ |
-| `feat`     | Fitur kamera, galeri, atau presensi              |
-| `fix`      | Perbaikan bug atau penanganan error              |
-| `build`    | Konfigurasi Bun, build, atau Vercel              |
-| `chore`    | Konfigurasi repository dan tooling               |
-| `test`     | Pengujian tanpa perubahan fitur                  |
-| `docs`     | Panduan setup, penggunaan, atau deployment       |
-| `refactor` | Perubahan struktur kode tanpa perubahan perilaku |
+| Type       | Example use                                 |
+| ---------- | ------------------------------------------- |
+| `feat`     | Camera, gallery, or attendance features     |
+| `fix`      | Bug fixes or error handling                 |
+| `build`    | Bun, build, or Vercel configuration         |
+| `chore`    | Repository configuration and tooling        |
+| `test`     | Tests without feature changes               |
+| `docs`     | Setup, usage, or deployment guides          |
+| `refactor` | Code restructuring without behavior changes |
 
-Contoh:
+Examples:
 
 ```text
 feat(camera): add automatic capture and gallery selection
@@ -32,28 +32,28 @@ build(vercel): separate static hosting from Firebase
 docs: explain Firebase rules deployment
 ```
 
-Gunakan body commit jika perlu menjelaskan alasan atau batasan perubahan. Untuk perubahan yang memutus kompatibilitas, tambahkan `!` setelah tipe/scope dan jelaskan `BREAKING CHANGE:` pada body.
+Add a commit body when you need to explain the reason for a change or its limitations. For breaking changes, add `!` after the type/scope and explain `BREAKING CHANGE:` in the body.
 
-## File untuk GitHub
+## Files for GitHub
 
-| Dikomit                                                   | Diabaikan `.gitignore`                              |
-| --------------------------------------------------------- | --------------------------------------------------- |
-| `src/`, `static/`, ikon PWA                               | `node_modules/`, `.svelte-kit/`, `build/`           |
-| `package.json`, `bun.lock`, konfigurasi build/lint        | Lockfile package manager lain                       |
-| `.env.example` berisi placeholder                         | `.env` dan seluruh `.env.*` berisi nilai lokal      |
-| `firebase.json`, `.firebaserc`, rules dan indeks          | Service account, private key, dan kredensial cloud  |
-| `vercel.json`                                             | `.vercel/`, state hosting dan emulator              |
-| `tests/`, `scripts/`, dokumentasi                         | Log, screenshot pengujian, profil browser, coverage |
-| Rekomendasi `.vscode/settings.json` dan `extensions.json` | State editor lain dan file OS                       |
-| Source aplikasi                                           | Skill/agent lokal `.agents/`, `.claude/`, `.codex/` |
+| Committed                                                 | Ignored by `.gitignore`                                  |
+| --------------------------------------------------------- | -------------------------------------------------------- |
+| `src/`, `static/`, PWA icons                              | `node_modules/`, `.svelte-kit/`, `build/`                |
+| `package.json`, `bun.lock`, build/lint configuration      | Other package managers' lockfiles                        |
+| `.env.example` with placeholders                          | `.env` and all `.env.*` files with local values          |
+| `firebase.json`, `.firebaserc`, rules, and indexes        | Service accounts, private keys, cloud credentials        |
+| `vercel.json`                                             | `.vercel/`, hosting and emulator state                   |
+| `tests/`, `scripts/`, documentation                       | Logs, test screenshots, browser profiles, coverage       |
+| Recommended `.vscode/settings.json` and `extensions.json` | Other editor state and OS files                          |
+| Application source                                        | Local skills/agents in `.agents/`, `.claude/`, `.codex/` |
 
-`.firebaserc` memuat ID proyek yang digunakan CLI; ID proyek bukan kredensial. Konfigurasi web Firebase memakai variabel `VITE_*` dan tersedia pada build browser, sementara private key/service account tidak boleh dimasukkan ke source atau variabel `VITE_*`.
+`.firebaserc` contains the project ID used by the CLI; a project ID isn't a credential. Firebase web configuration uses `VITE_*` variables and is available in the browser build. Private keys and service accounts must never be added to source files or `VITE_*` variables.
 
-`static/` tetap dikomit karena berisi manifest dan ikon aplikasi. Jangan menyimpan foto presensi nyata di folder source; aplikasi menyimpannya ke Firestore. `test-results/` serta `uploads/` diabaikan untuk hasil lokal. `.prettierignore` hanya mengatur formatter dan tidak menentukan file yang dikirim ke GitHub.
+Keep `static/` committed because it contains the manifest and app icons. Don't store real attendance photos in source folders; the app stores them in Firestore. `test-results/` and `uploads/` are ignored for local output. `.prettierignore` only controls formatting, not which files are sent to GitHub.
 
-Jika file rahasia terlanjur pernah dikomit, menambahkannya ke `.gitignore` tidak menghapusnya dari riwayat. Ganti kredensial yang terpapar dan tangani riwayat secara terpisah sebelum publikasi.
+If a secret was already committed, adding it to `.gitignore` won't remove it from history. Rotate the exposed credentials and handle the Git history separately before publishing.
 
-## Pemeriksaan sebelum commit
+## Checks before committing
 
 ```powershell
 bun run check
@@ -63,6 +63,6 @@ git diff --cached --check
 git diff --cached --stat
 ```
 
-Untuk perubahan kamera, jalankan `bun run test:browser` dengan Firebase Emulator dan server lokal dalam mode emulator. Script memakai kamera virtual Chrome sehingga tidak mengambil gambar dari webcam pribadi.
+For camera changes, run `bun run test:browser` with the Firebase Emulator and a local server in emulator mode. The script uses Chrome's virtual camera, so it doesn't capture images from your personal webcam.
 
-Periksa isi file yang di-stage sebelum commit. Commit lokal tidak otomatis mengirim kode ke GitHub. Panduan deployment website ada di [docs/VERCEL.md](docs/VERCEL.md); rules Firestore diterapkan terpisah sesuai [docs/FIREBASE.md](docs/FIREBASE.md).
+Review staged files before committing. A local commit doesn't automatically push code to GitHub. See [docs/VERCEL.md](docs/VERCEL.md) for website deployment; Firestore rules are deployed separately as described in [docs/FIREBASE.md](docs/FIREBASE.md).
