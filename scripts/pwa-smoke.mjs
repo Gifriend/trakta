@@ -19,8 +19,13 @@ page.on('response', (response) => {
 });
 try {
 	const baseURL = process.env.TEST_URL || 'http://127.0.0.1:4173';
-	await page.goto(new URL('/icon.svg', baseURL).href);
+	const cacheSeedPage = new URL('/__pwa-cache-seed', baseURL).href;
+	await page.route(cacheSeedPage, (route) =>
+		route.fulfill({ contentType: 'text/html', body: '<link rel="icon" href="/icon.svg">' })
+	);
+	await page.goto(cacheSeedPage);
 	await page.evaluate(() => caches.open('hadir-shell-upgrade-test'));
+	await page.unroute(cacheSeedPage);
 	await page.goto(baseURL);
 	await page.getByRole('heading', { name: 'Selamat datang kembali.' }).waitFor();
 	await page.evaluate(() =>

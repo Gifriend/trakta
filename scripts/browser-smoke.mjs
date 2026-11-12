@@ -162,13 +162,19 @@ try {
 	});
 	await setEmulatorRules(appRules);
 	await page.getByRole('button', { name: 'Muat ulang data' }).click();
-	await page.setViewportSize({ width: 375, height: 812 });
+	await page.setViewportSize({ width: 320, height: 700 });
 	const dailyAction = page.getByRole('button', { name: 'Presensi masuk', exact: true });
 	await dailyAction.waitFor();
+	await page.evaluate(() => window.scrollTo(0, 0));
 	assert.equal(await page.locator('video').count(), 0, 'camera waits for the attendance action');
 	assert.ok(
-		await dailyAction.evaluate((button) => button.getBoundingClientRect().bottom < innerHeight)
+		await dailyAction.evaluate((button) => {
+			const navigation = document.querySelector('.mobile-navigation');
+			const rect = button.getBoundingClientRect();
+			return rect.top >= 0 && rect.bottom < navigation.getBoundingClientRect().top;
+		})
 	);
+	await page.setViewportSize({ width: 375, height: 812 });
 	await page.screenshot({ path: 'test-results/today-mobile.png' });
 	await dailyAction.click();
 	await page.getByRole('heading', { name: 'Catat presensi masuk' }).waitFor();
@@ -244,10 +250,22 @@ try {
 	await appearance.selectOption('light');
 	await settings('Settings').getByRole('button', { name: 'Close settings' }).click();
 	await settings('Settings').waitFor({ state: 'hidden' });
-	await page
-		.locator('.mobile-navigation')
-		.getByRole('link', { name: 'History', exact: true })
-		.click();
+	const mobileNav = page.locator('.mobile-navigation');
+	await page.evaluate(() => {
+		window.__streamBeforeHistory = document.querySelector('video').srcObject;
+	});
+	await mobileNav.getByRole('link', { name: 'History', exact: true }).click();
+	await mobileNav.locator('a[href="#riwayat"][aria-current="location"]').waitFor();
+	assert.ok(
+		await page.evaluate(() =>
+			window.__streamBeforeHistory.getTracks().every((track) => track.readyState === 'ended')
+		)
+	);
+	assert.ok(
+		await page.evaluate(
+			() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom) >= 64
+		)
+	);
 	assert.equal(new URL(page.url()).hash, '#riwayat');
 	assert.ok(
 		await page.locator('#riwayat').evaluate((history) => {
@@ -255,7 +273,8 @@ try {
 			return history.getBoundingClientRect().top >= header.getBoundingClientRect().bottom;
 		})
 	);
-	await page.evaluate(() => window.scrollTo(0, 0));
+	await mobileNav.getByRole('link', { name: 'Today', exact: true }).click();
+	await mobileNav.locator('a[href="#ringkasan"][aria-current="location"]').waitFor();
 	for (const theme of ['glass', 'clay', 'swiss', 'deco']) {
 		await settingsButton('Settings').click();
 		await themePicker.selectOption(theme);
@@ -274,6 +293,8 @@ try {
 	await combo('Language').selectOption('id');
 	await combo('Tema').selectOption('classic');
 	await combo('Tampilan').selectOption('light');
+	await page.getByRole('button', { name: 'Lanjutkan presensi', exact: true }).click();
+	await page.getByRole('button', { name: 'Buka kamera', exact: true }).click();
 	await page.getByRole('button', { name: 'Ambil foto', exact: true }).click();
 	const captured = page.getByAltText('Pratinjau foto presensi yang akan dikirim');
 	await captured.waitFor();
@@ -459,6 +480,10 @@ try {
 			await context.setOffline(false);
 		}
 		await page.getByRole('button', { name: `Konfirmasi ${kind}` }).click();
+		if (kind === 'masuk') {
+			await page.getByRole('button', { name: 'Presensi pulang', exact: true }).waitFor();
+			await page.waitForFunction(() => document.activeElement?.id === 'daily-title');
+		}
 	}
 	await page.getByRole('heading', { name: 'Hari ini, tuntas.' }).waitFor();
 	const emulator = await initializeTestEnvironment({
@@ -501,7 +526,7 @@ try {
 	await history.getByText('Halaman 3', { exact: true }).waitFor();
 	await history.getByLabel('Tanggal mulai').fill('2020-01-02');
 	await history.getByLabel('Tanggal sampai').fill('2020-01-13');
-	await history.getByRole('button', { name: 'Filter tanggal', exact: true }).click();
+	await history.getByRole('button', { name: 'Terapkan filter', exact: true }).click();
 	await history.getByText('Halaman 1', { exact: true }).waitFor();
 	await history.getByText('Catatan lama 20200113').waitFor();
 	assert.equal(await history.getByText('Catatan lama 20200114').count(), 0);
@@ -530,6 +555,9 @@ try {
 	const dayKey = today.match(/\d{8}$/)[0];
 	const todayFilter = `${dayKey.slice(0, 4)}-${dayKey.slice(4, 6)}-${dayKey.slice(6, 8)}`;
 	await page.setViewportSize({ width: 375, height: 812 });
+	const mobileFilter = history.getByRole('button', { name: /^Filter tanggal/ });
+	assert.equal(await history.getByLabel('Tanggal mulai').isVisible(), false);
+	await mobileFilter.click();
 	const filterFits = await history.locator('.date-filter').evaluate((form) => {
 		const [start, end] = Array.from(form.querySelectorAll('input'), (input) =>
 			input.getBoundingClientRect()
@@ -544,8 +572,9 @@ try {
 	assert.ok(filterFits, 'mobile date fields stay inside the filter and have a visible gap');
 	await history.getByLabel('Tanggal mulai').fill(todayFilter);
 	await history.getByLabel('Tanggal sampai').fill(todayFilter);
-	await history.getByRole('button', { name: 'Filter tanggal', exact: true }).click();
+	await history.getByRole('button', { name: 'Terapkan filter', exact: true }).click();
 	await history.getByText(/^Periode /).waitFor();
+	assert.equal(await mobileFilter.getAttribute('aria-expanded'), 'false');
 	assert.equal(await history.getByRole('link', { name: 'Unduh Excel', exact: true }).count(), 0);
 	await page.evaluate(() => {
 		window.createImageBitmap = undefined;
