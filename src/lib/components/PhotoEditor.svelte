@@ -32,6 +32,76 @@
 	let showOriginal = $state(false);
 	let saving = $state(false);
 	let error = $state('');
+	let selectedSticker = $state('');
+	let customSticker = $state('');
+	const sticker = $derived(edits.stickers?.find((item) => item.id === selectedSticker));
+	const stickerChoices = [
+		'❤️',
+		'💕',
+		'✨',
+		'⭐',
+		'🌈',
+		'🌸',
+		'🌻',
+		'🍓',
+		'🍒',
+		'🎀',
+		'🦋',
+		'🐱',
+		'🐻',
+		'🐰',
+		'🐼',
+		'😎',
+		'🥰',
+		'😂',
+		'🥳',
+		'👑',
+		'💫',
+		'☁️',
+		'🌙',
+		'🎉'
+	];
+
+	function addSticker(text: string) {
+		if (!text.trim() || (edits.stickers?.length ?? 0) >= 20) return;
+		const item = {
+			id: crypto.randomUUID(),
+			text: text.trim(),
+			x: 50,
+			y: 50,
+			size: 15,
+			rotation: 0
+		};
+		updateEdits({ stickers: [...(edits.stickers ?? []), item] });
+		selectedSticker = item.id;
+		customSticker = '';
+	}
+
+	function changeSticker(changes: Partial<NonNullable<PhotoEdits['stickers']>[number]>) {
+		updateEdits({
+			stickers: edits.stickers?.map((item) =>
+				item.id === selectedSticker ? { ...item, ...changes } : item
+			)
+		});
+	}
+
+	function placeSticker(event: PointerEvent) {
+		if (!preview || !sticker || saving) return;
+		const bounds = preview.getBoundingClientRect();
+		const scale = Math.min(bounds.width / preview.width, bounds.height / preview.height);
+		const width = preview.width * scale;
+		const height = preview.height * scale;
+		changeSticker({
+			x: Math.max(
+				5,
+				Math.min(95, ((event.clientX - bounds.left - (bounds.width - width) / 2) / width) * 100)
+			),
+			y: Math.max(
+				5,
+				Math.min(95, ((event.clientY - bounds.top - (bounds.height - height) / 2) / height) * 100)
+			)
+		});
+	}
 
 	function updateEdits(changes: Partial<PhotoEdits>) {
 		edits = { ...edits, ...changes };
@@ -62,7 +132,13 @@
 		error = '';
 		try {
 			let result = original;
-			if (edits.frame !== 'none' || edits.turns || edits.square) {
+			if (
+				edits.frame !== 'none' ||
+				edits.turns ||
+				edits.square ||
+				edits.stickers?.length ||
+				edits.caption?.trim()
+			) {
 				result = await saveEditedPhoto(source, edits);
 			}
 			onapply(result, edits);
@@ -119,6 +195,37 @@
 		>
 			<canvas bind:this={preview} aria-hidden="true"></canvas>
 		</div>
+		{#if sticker && !showOriginal}
+			<button
+				type="button"
+				class="sticker-position"
+				aria-label={t('Geser stiker pada foto atau gunakan tombol panah')}
+				disabled={saving}
+				onpointerdown={(event) => {
+					event.currentTarget.setPointerCapture(event.pointerId);
+					placeSticker(event);
+				}}
+				onpointermove={(event) => {
+					if (event.buttons) placeSticker(event);
+				}}
+				onkeydown={(event) => {
+					const offsets: Record<string, [number, number]> = {
+						ArrowLeft: [-1, 0],
+						ArrowRight: [1, 0],
+						ArrowUp: [0, -1],
+						ArrowDown: [0, 1]
+					};
+					const offset = offsets[event.key];
+					if (offset && sticker) {
+						event.preventDefault();
+						changeSticker({
+							x: Math.max(5, Math.min(95, sticker.x + offset[0])),
+							y: Math.max(5, Math.min(95, sticker.y + offset[1]))
+						});
+					}
+				}}
+			></button>
+		{/if}
 	</div>
 
 	<fieldset class="editor-controls" disabled={!source || saving}>
@@ -139,6 +246,70 @@
 			</label>
 		</div>
 	</fieldset>
+	<fieldset class="decorations" disabled={!source || saving}>
+		<legend>{t('Stiker dan emoji')}</legend>
+		<div class="sticker-palette">
+			{#each stickerChoices as emoji (emoji)}
+				<button
+					type="button"
+					class="button secondary"
+					aria-label={t('Tambah stiker {emoji}', { emoji })}
+					disabled={(edits.stickers?.length ?? 0) >= 20}
+					onclick={() => addSticker(emoji)}>{emoji}</button
+				>
+			{/each}
+		</div>
+		<label for={`${id}-custom`}>{t('Emoji atau simbol sendiri')}</label>
+		<div class="custom-sticker">
+			<input id={`${id}-custom`} maxlength="12" bind:value={customSticker} placeholder="☀️ ♡ ✿" />
+			<button
+				type="button"
+				class="button secondary"
+				disabled={!customSticker.trim() || (edits.stickers?.length ?? 0) >= 20}
+				onclick={() => addSticker(customSticker)}>{t('Tambah')}</button
+			>
+		</div>
+		{#if edits.stickers?.length}
+			<label for={`${id}-sticker`}>{t('Stiker yang diedit')}</label>
+			<select id={`${id}-sticker`} bind:value={selectedSticker}>
+				<option value="">{t('Pilih stiker')}</option>
+				{#each edits.stickers as item, index (item.id)}<option value={item.id}
+						>{index + 1} · {item.text}</option
+					>{/each}
+			</select>
+		{/if}
+		{#if sticker}
+			<div class="sticker-sliders">
+				{#each [['x', 'Posisi horizontal', 5, 95], ['y', 'Posisi vertikal', 5, 95], ['size', 'Ukuran stiker', 5, 35], ['rotation', 'Rotasi stiker', -180, 180]] as [key, label, min, max] (key)}
+					<label
+						>{t(String(label))}<input
+							type="range"
+							min={Number(min)}
+							max={Number(max)}
+							value={sticker[key as 'x' | 'y' | 'size' | 'rotation']}
+							oninput={(event) =>
+								changeSticker({ [String(key)]: Number(event.currentTarget.value) })}
+						/></label
+					>
+				{/each}
+			</div>
+			<button
+				type="button"
+				class="button secondary"
+				onclick={() => {
+					updateEdits({ stickers: edits.stickers?.filter((item) => item.id !== selectedSticker) });
+					selectedSticker = '';
+				}}>{t('Hapus stiker')}</button
+			>
+		{/if}
+		<label for={`${id}-caption`}>{t('Teks pada foto')}</label>
+		<input
+			id={`${id}-caption`}
+			maxlength="60"
+			value={edits.caption ?? ''}
+			oninput={(event) => updateEdits({ caption: event.currentTarget.value })}
+		/>
+	</fieldset>
 
 	{#if error}<p class="notice error" role="alert">{t(error)}</p>{/if}
 	<button
@@ -151,6 +322,67 @@
 </dialog>
 
 <style>
+	.sticker-position {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		cursor: move;
+		touch-action: none;
+	}
+	.decorations {
+		border: 0;
+		padding: 0;
+		margin: 16px 0;
+		min-width: 0;
+	}
+	.decorations legend {
+		font-weight: 600;
+		margin-bottom: 10px;
+	}
+	.decorations label {
+		margin-top: 12px;
+		font-size: 13px;
+	}
+	.decorations select {
+		width: 100%;
+		padding: 10px;
+		background: var(--surface);
+		color: var(--ink);
+		border: 1px solid var(--control-border);
+		border-radius: var(--control-radius);
+	}
+	.sticker-palette {
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 6px;
+	}
+	.sticker-palette button {
+		padding: 4px;
+		min-height: 44px;
+		font-size: 22px;
+		justify-content: center;
+	}
+	.custom-sticker {
+		display: flex;
+		gap: 8px;
+	}
+	.custom-sticker input {
+		min-width: 0;
+	}
+	.sticker-sliders {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+	}
+	.sticker-sliders input {
+		padding: 0;
+		min-height: 44px;
+		accent-color: var(--primary);
+	}
 	.photo-editor {
 		position: fixed;
 		inset: 0;
@@ -193,6 +425,7 @@
 		color: var(--primary);
 	}
 	.editor-preview {
+		position: relative;
 		display: grid;
 		place-items: center;
 		height: clamp(130px, 39dvh, 320px);

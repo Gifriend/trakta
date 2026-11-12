@@ -11,6 +11,17 @@ export type PhotoEdits = {
 	frame: keyof typeof PHOTO_FRAMES;
 	turns: number;
 	square: boolean;
+	stickers?: PhotoSticker[];
+	caption?: string;
+};
+
+export type PhotoSticker = {
+	id: string;
+	text: string;
+	x: number;
+	y: number;
+	size: number;
+	rotation: number;
 };
 
 export const DEFAULT_PHOTO_EDITS: PhotoEdits = { frame: 'none', turns: 0, square: false };
@@ -128,6 +139,31 @@ export function renderEditedPhoto(
 	);
 	context.restore();
 	drawPhotoFrame(context, edits.frame);
+	for (const sticker of edits.stickers ?? []) {
+		context.save();
+		context.translate((canvas.width * sticker.x) / 100, (canvas.height * sticker.y) / 100);
+		context.rotate((sticker.rotation * Math.PI) / 180);
+		context.font = `${(Math.min(canvas.width, canvas.height) * sticker.size) / 100}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+		context.textAlign = 'center';
+		context.textBaseline = 'middle';
+		context.fillText(sticker.text, 0, 0);
+		context.restore();
+	}
+	if (edits.caption?.trim()) {
+		const size = Math.min(canvas.width, canvas.height) * 0.045;
+		context.font = `600 ${size}px sans-serif`;
+		context.textAlign = 'center';
+		context.textBaseline = 'middle';
+		context.fillStyle = '#14251f';
+		context.fillRect(0, canvas.height - size * 2, canvas.width, size * 2);
+		context.fillStyle = '#ffffff';
+		context.fillText(
+			edits.caption.trim(),
+			canvas.width / 2,
+			canvas.height - size,
+			canvas.width * 0.92
+		);
+	}
 }
 export async function saveEditedPhoto(image: HTMLImageElement, edits: PhotoEdits) {
 	const canvas = document.createElement('canvas');
