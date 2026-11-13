@@ -17,24 +17,74 @@ export function photoLocationIssue(location: PhotoLocation, mode: WorkMode) {
 		: '';
 }
 
-export function locatePhoto(source: PhotoSource): Promise<PhotoLocation> {
+function singleLocationAttempt(options: PositionOptions): Promise<GeolocationPosition> {
 	return new Promise((resolve, reject) => {
-		if (!navigator.geolocation) {
-			reject(new Error('Lokasi perangkat memerlukan browser yang mendukung dan koneksi HTTPS.'));
-			return;
-		}
-		navigator.geolocation.getCurrentPosition(
-			({ coords: { latitude, longitude, accuracy } }) =>
-				resolve({ latitude, longitude, accuracy, source }),
-			(error) =>
-				reject(
-					new Error(
-						error.code === 1
-							? 'Izinkan akses lokasi untuk mengambil foto presensi.'
-							: 'Lokasi belum dapat diperoleh. Aktifkan lokasi perangkat lalu coba lagi.'
-					)
-				),
-			{ enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
-		);
+		navigator.geolocation.getCurrentPosition(resolve, reject, options);
 	});
+}
+
+function locationErrorMessage(error: GeolocationPositionError): string {
+	switch (error.code) {
+		case 1:
+			return 'Izin lokasi belum diberikan. Ketuk ikon gembok/setelan di address bar browser untuk mengizinkan lokasi.';
+		case 2:
+			return 'GPS atau layanan lokasi perangkat tidak aktif. Mohon aktifkan GPS/Lokasi di pengaturan HP Anda lalu coba lagi.';
+		case 3:
+			return 'Waktu pencarian lokasi habis. Pastikan GPS HP aktif dan sinyal memadai lalu coba lagi.';
+		default:
+			return 'Lokasi belum dapat diperoleh. Aktifkan lokasi perangkat lalu coba lagi.';
+	}
+}
+
+export async function checkLocationPermission(): Promise<PermissionState | 'unsupported'> {
+	if (!navigator.permissions?.query) return 'unsupported';
+	try {
+		const status = await navigator.permissions.query({ name: 'geolocation' });
+		return status.state;
+	} catch {
+		return 'unsupported';
+	}
+}
+
+export async function locatePhoto(source: PhotoSource): Promise<PhotoLocation> {
+	if (!navigator.geolocation) {
+		throw new Error('Lokasi perangkat memerlukan browser yang mendukung dan koneksi HTTPS.');
+	}
+
+	try {
+		const pos = await singleLocationAttempt({
+			enableHighAccuracy: true,
+			maximumAge: 10000,
+			timeout: 10000
+		});
+		return {
+			latitude: pos.coords.latitude,
+			longitude: pos.coords.longitude,
+			accuracy: pos.coords.accuracy,
+			source
+		};
+	} catch (err: unknown) {
+		const geoErr = err as GeolocationPositionError;
+		if (geoErr?.code === 1) {
+			throw new Error(locationErrorMessage(geoErr));
+		}
+
+		// Fallback for mobile: standard accuracy / cell & Wi-Fi fused location
+		try {
+			const pos = await singleLocationAttempt({
+				enableHighAccuracy: false,
+				maximumAge: 30000,
+				timeout: 10000
+			});
+			return {
+				latitude: pos.coords.latitude,
+				longitude: pos.coords.longitude,
+				accuracy: pos.coords.accuracy,
+				source
+			};
+		} catch (fallbackErr: unknown) {
+			const finalErr = (fallbackErr as GeolocationPositionError) || geoErr;
+			throw new Error(locationErrorMessage(finalErr));
+		}
+	}
 }

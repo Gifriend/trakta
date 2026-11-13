@@ -23,6 +23,12 @@ const columns = [
 	{ label: 'Status', width: 17 },
 	{ label: 'Lokasi kerja masuk', width: 22 },
 	{ label: 'Lokasi kerja pulang', width: 22 },
+	{ label: 'Koordinat masuk', width: 25 },
+	{ label: 'Akurasi masuk (m)', width: 18 },
+	{ label: 'Link peta masuk', width: 38 },
+	{ label: 'Koordinat pulang', width: 25 },
+	{ label: 'Akurasi pulang (m)', width: 18 },
+	{ label: 'Link peta pulang', width: 38 },
 	{ label: 'Catatan masuk', width: 42 },
 	{ label: 'Catatan pulang', width: 42 }
 ];
@@ -121,6 +127,15 @@ export async function createAttendanceWorkbook(
 		const date = Math.floor((dateFromKey(day.dateKey).getTime() - excelEpoch) / millisecondsPerDay);
 		const rowPhotos = photos?.[index];
 
+		const inLoc = day.checkIn.photoLocation;
+		const outLoc = day.checkOut?.photoLocation;
+		const inCoord = inLoc ? `${inLoc.latitude.toFixed(6)}, ${inLoc.longitude.toFixed(6)}` : null;
+		const inAcc = inLoc ? Math.round(inLoc.accuracy) : null;
+		const inMap = inLoc ? `https://www.google.com/maps?q=${inLoc.latitude},${inLoc.longitude}` : null;
+		const outCoord = outLoc ? `${outLoc.latitude.toFixed(6)}, ${outLoc.longitude.toFixed(6)}` : null;
+		const outAcc = outLoc ? Math.round(outLoc.accuracy) : null;
+		const outMap = outLoc ? `https://www.google.com/maps?q=${outLoc.latitude},${outLoc.longitude}` : null;
+
 		const row: Row = [
 			{
 				value: date,
@@ -134,6 +149,12 @@ export async function createAttendanceWorkbook(
 			t(day.checkOut ? 'Lengkap' : 'Sudah masuk'),
 			t(WORK_MODES[day.checkIn.mode]),
 			day.checkOut ? t(WORK_MODES[day.checkOut.mode]) : null,
+			inCoord ? { value: inCoord, type: String } : null,
+			inAcc === null ? null : { value: inAcc, type: Number },
+			inMap ? { value: inMap, type: String } : null,
+			outCoord ? { value: outCoord, type: String } : null,
+			outAcc === null ? null : { value: outAcc, type: Number },
+			outMap ? { value: outMap, type: String } : null,
 			{ value: day.checkIn.note, type: String, wrap: true },
 			day.checkOut ? { value: day.checkOut.note, type: String, wrap: true } : null
 		];

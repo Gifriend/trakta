@@ -272,9 +272,17 @@
 		{#if location}
 			<p>
 				<strong>{t(index === 0 ? 'Lokasi foto masuk' : 'Lokasi foto pulang')}</strong>
-				{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)} · ±{Math.round(
-					location.accuracy
-				)} m
+				<a
+					href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="location-link"
+					title={t('Buka di Google Maps')}
+				>
+					<Icon name="marker" size={13} />
+					<span>{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</span>
+				</a>
+				· ±{Math.round(location.accuracy)} m
 				{#if location.source === 'gallery'}· {t('Lokasi saat memilih file')}{/if}
 			</p>
 		{/if}
@@ -484,7 +492,7 @@
 				<thead
 					><tr
 						><th>{t('Tanggal')}</th><th>{t('Foto')}</th><th>{t('Masuk')}</th><th>{t('Pulang')}</th
-						><th>{t('Durasi')}</th><th>{t('Status')}</th></tr
+						><th>{t('Durasi')}</th><th>{t('Status')}</th><th>{t('Lokasi (Koordinat)')}</th></tr
 					></thead
 				><tbody
 					>{#each currentPage.days as day (day.id)}<tr
@@ -514,9 +522,47 @@
 								><span class={['badge', { complete: day.checkOut }]}
 									>{day.checkOut ? t('Lengkap') : t('Sudah masuk')}</span
 								></td
-							></tr
+							><td>
+								<div class="table-location-list">
+									{#if day.checkIn.photoLocation}
+										<div class="table-location-item">
+											<span class="location-kind">{t('Masuk')}:</span>
+											<a
+												href={`https://www.google.com/maps?q=${day.checkIn.photoLocation.latitude},${day.checkIn.photoLocation.longitude}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="table-location-link"
+												title={t('Buka di Google Maps')}
+											>
+												<Icon name="marker" size={13} />
+												<span>{day.checkIn.photoLocation.latitude.toFixed(5)}, {day.checkIn.photoLocation.longitude.toFixed(5)}</span>
+											</a>
+											<span class="location-acc">±{Math.round(day.checkIn.photoLocation.accuracy)}m</span>
+										</div>
+									{/if}
+									{#if day.checkOut?.photoLocation}
+										<div class="table-location-item">
+											<span class="location-kind">{t('Pulang')}:</span>
+											<a
+												href={`https://www.google.com/maps?q=${day.checkOut.photoLocation.latitude},${day.checkOut.photoLocation.longitude}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="table-location-link"
+												title={t('Buka di Google Maps')}
+											>
+												<Icon name="marker" size={13} />
+												<span>{day.checkOut.photoLocation.latitude.toFixed(5)}, {day.checkOut.photoLocation.longitude.toFixed(5)}</span>
+											</a>
+											<span class="location-acc">±{Math.round(day.checkOut.photoLocation.accuracy)}m</span>
+										</div>
+									{/if}
+									{#if !day.checkIn.photoLocation && !day.checkOut?.photoLocation}
+										<span class="muted">-</span>
+									{/if}
+								</div>
+							</td></tr
 						>{#if day.checkIn.note || day.checkOut?.note || day.checkIn.photoLocation || day.checkOut?.photoLocation}<tr
-								class="note-row"><td colspan="6">{@render dayNotes(day)}</td></tr
+								class="note-row"><td colspan="7">{@render dayNotes(day)}</td></tr
 							>{/if}{/each}</tbody
 				>
 			</table>
@@ -822,6 +868,38 @@
 	.photo-actions {
 		display: flex;
 		gap: 8px;
+	}
+	.table-location-list {
+		display: grid;
+		gap: 4px;
+		font-size: 11px;
+	}
+	.table-location-item {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+	}
+	.location-kind {
+		font-weight: 600;
+		color: var(--muted);
+		font-size: 10px;
+	}
+	.table-location-link,
+	.location-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
+		color: var(--primary);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.table-location-link:hover,
+	.location-link:hover {
+		color: var(--primary-hover, var(--primary));
+	}
+	.location-acc {
+		color: var(--muted);
+		font-size: 10px;
 	}
 	.note-row td {
 		border-top: none;

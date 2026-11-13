@@ -40,10 +40,32 @@
 	let editing = $state(false);
 	let processing = $state(false);
 	let submitting = $state(false);
+	let locating = $state(false);
 	let error = $state('');
 	let cameraActive = $state(false);
 	let picker: { openCamera: () => Promise<void>; stopCamera: () => void };
 	let selectionVersion = 0;
+
+	async function refreshLocation(): Promise<boolean> {
+		if (locating || submitting) return false;
+		locating = true;
+		error = '';
+		try {
+			const location = await locatePhoto(mode === 'office' ? 'camera' : 'gallery');
+			const issue = photoLocationIssue(location, mode);
+			photoLocation = location;
+			if (issue) {
+				error = issue;
+				return false;
+			}
+			return true;
+		} catch (cause) {
+			error = friendlyError(cause);
+			return false;
+		} finally {
+			locating = false;
+		}
+	}
 
 	async function locateCapture() {
 		const location = await locatePhoto('camera');
@@ -83,12 +105,15 @@
 	}
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (!online || submitting || processing || cameraActive || editing) return;
-		if (!photo || !photoLocation) {
+		if (!online || submitting || processing || cameraActive || editing || locating) return;
+		if (!photo) {
 			error = 'Tambahkan foto untuk melengkapi presensimu.';
 			return;
 		}
-		if (locationIssue) return;
+		if (!photoLocation || locationIssue) {
+			const success = await refreshLocation();
+			if (!success || !photoLocation || locationIssue) return;
+		}
 		submitting = true;
 		error = '';
 		try {
@@ -168,7 +193,11 @@
 				<div class="photo-actions">
 					<p class="photo-ready" role="status">
 						<Icon name="check" size={16} />{t(
-							locationIssue ? 'Lokasi foto tercatat.' : 'Foto dan lokasi siap dikirim.'
+							locationIssue
+								? 'Lokasi foto tercatat.'
+								: !photoLocation
+									? 'Foto siap, lokasi belum ada.'
+									: 'Foto dan lokasi siap dikirim.'
 						)}
 					</p>
 					<button
@@ -180,9 +209,25 @@
 					>
 				</div>
 			{/if}
-			{#if locationIssue}<p class="notice error" role="alert">
-					{t(locationIssue, { radius: String(OFFICE_RADIUS_METERS) })}
-				</p>{/if}
+			{#if locationIssue || (photo && !photoLocation && !cameraActive)}
+				<div class="location-warning-box">
+					<p class="notice error" role="alert">
+						{t(
+							locationIssue || 'Lokasi presensi belum diperoleh.',
+							{ radius: String(OFFICE_RADIUS_METERS) }
+						)}
+					</p>
+					<button
+						type="button"
+						class="button secondary retry-location-btn"
+						disabled={locating || submitting}
+						onclick={refreshLocation}
+					>
+						<Icon name="marker" size={16} />
+						{t(locating ? 'Memeriksa lokasi…' : 'Minta izin / perbarui lokasi')}
+					</button>
+				</div>
+			{/if}
 		</div>
 		<label for="note">{t('Catatan')} <span class="optional">{t('(opsional)')}</span></label
 		><textarea
@@ -220,16 +265,17 @@
 				disabled={!online ||
 					processing ||
 					submitting ||
+					locating ||
 					cameraActive ||
-					!photo ||
-					!photoLocation ||
-					!!locationIssue}
+					!photo}
 				>{t(
 					submitting
 						? 'Mengirim presensi…'
-						: kind === 'checkIn'
-							? 'Konfirmasi masuk'
-							: 'Konfirmasi pulang'
+						: locating
+							? 'Memeriksa lokasi…'
+							: kind === 'checkIn'
+								? 'Konfirmasi masuk'
+								: 'Konfirmasi pulang'
 				)}<Icon name="arrow" size={18} /></button
 			>
 		</div>
@@ -340,6 +386,20 @@
 		resize: vertical;
 		min-height: 72px;
 		font-size: 12px;
+	}
+	.location-warning-box {
+		display: grid;
+		gap: 8px;
+		margin-top: 10px;
+	}
+	.location-warning-box .notice {
+		margin: 0;
+	}
+	.retry-location-btn {
+		width: 100%;
+		justify-content: center;
+		gap: 8px;
+		font-size: 13px;
 	}
 	.character-count {
 		text-align: right;

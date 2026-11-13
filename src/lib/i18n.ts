@@ -208,6 +208,15 @@ const english: Record<string, string> = {
 		'Allow location access to take attendance photos.',
 	'Lokasi belum dapat diperoleh. Aktifkan lokasi perangkat lalu coba lagi.':
 		'Location is unavailable. Enable device location and try again.',
+	'Izin lokasi belum diberikan. Ketuk ikon gembok/setelan di address bar browser untuk mengizinkan lokasi.':
+		'Location access was not granted. Tap the lock/settings icon in the browser address bar to allow location.',
+	'GPS atau layanan lokasi perangkat tidak aktif. Mohon aktifkan GPS/Lokasi di pengaturan HP Anda lalu coba lagi.':
+		'Device GPS or location service is disabled. Turn on Location in your device settings and try again.',
+	'Waktu pencarian lokasi habis. Pastikan GPS HP aktif dan sinyal memadai lalu coba lagi.':
+		'Location request timed out. Ensure device GPS is active with adequate signal and try again.',
+	'Minta izin / perbarui lokasi': 'Request permission / update location',
+	'Lokasi presensi belum diperoleh.': 'Attendance location has not been obtained.',
+	'Foto siap, lokasi belum ada.': 'Photo ready, location not obtained yet.',
 	'Ambil foto langsung dari kamera untuk presensi kantor.':
 		'Use the live camera for office attendance.',
 	'Lokasi belum cukup akurat. Dekati jendela atau area terbuka lalu coba lagi.':
@@ -315,6 +324,14 @@ const english: Record<string, string> = {
 	'Lokasi kerja pulang': 'Check-out work location',
 	'Catatan masuk': 'Check-in note',
 	'Catatan pulang': 'Check-out note',
+	'Lokasi (Koordinat)': 'Location (Coordinates)',
+	'Buka di Google Maps': 'Open in Google Maps',
+	'Koordinat masuk': 'Check-in coordinates',
+	'Akurasi masuk (m)': 'Check-in accuracy (m)',
+	'Link peta masuk': 'Check-in map link',
+	'Koordinat pulang': 'Check-out coordinates',
+	'Akurasi pulang (m)': 'Check-out accuracy (m)',
+	'Link peta pulang': 'Check-out map link',
 	Durasi: 'Duration',
 	Status: 'Status',
 	Foto: 'Photo',
